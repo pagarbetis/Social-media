@@ -26,10 +26,18 @@
             top: -100px;
         }
 
+        .comment-image-trigger {
+            width: 32px;
+            min-width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+            padding: 0;
+            border-radius: 50% !important;
+        }
+
         body {
             background-color: #f8f9fa;
             padding-top: 70px;
-            /* Padding bawah khusus HP agar konten tidak tertutup bottom navbar */
             padding-bottom: 60px;
         }
 
@@ -80,6 +88,7 @@
             position: absolute;
             top: calc(100% + 8px);
             left: 0;
+            display: none;
             z-index: 1085;
             width: 18rem;
             max-width: calc(100vw - 24px);
@@ -89,9 +98,6 @@
             background: #fff;
             box-shadow: 0 6px 20px rgb(33 37 41 / 14%);
             color: #212529;
-            opacity: 0;
-            pointer-events: none;
-            visibility: hidden;
         }
 
         .user-popover.is-above .user-popover-card {
@@ -100,9 +106,7 @@
         }
 
         .user-popover.is-open .user-popover-card {
-            opacity: 1;
-            pointer-events: auto;
-            visibility: visible;
+            display: block;
         }
 
         .user-popover-heading {
@@ -183,39 +187,39 @@
 
             <!-- Menu Desktop dengan Dropdown -->
             @auth
-                <div class="gap-3 d-none d-md-flex align-items-center">
-                    <div class="dropdown">
-                        <button
-                            class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> Akun Saya
-                        </button>
-                        <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
-                            <li>
-                                <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
-                                    <i class="bi bi-person me-2"></i> Profil Saya
-                                </a>
-                            </li>
-                            <li>
-                                <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
-                                    <i class="bi bi-key me-2"></i> Ganti Password
-                                </a>
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li>
-                                <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="button" onclick="confirmLogout()"
-                                        class="py-2 bg-transparent border-0 dropdown-item small text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
+            <div class="gap-3 d-none d-md-flex align-items-center">
+                <div class="dropdown">
+                    <button
+                        class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i> Akun Saya
+                    </button>
+                    <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
+                        <li>
+                            <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
+                                <i class="bi bi-person me-2"></i> Profil Saya
+                            </a>
+                        </li>
+                        <li>
+                            <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
+                                <i class="bi bi-key me-2"></i> Ganti Password
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="button" onclick="confirmLogout()"
+                                    class="py-2 bg-transparent border-0 dropdown-item small text-danger">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
+            </div>
             @endauth
         </div>
     </nav>
@@ -227,33 +231,33 @@
 
     <!-- 3. Bottom Navbar Mobile: Hanya muncul di HP (d-flex d-md-none) -->
     @auth
-        <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
-            style="z-index: 1030;">
-            <!-- Tombol Home -->
-            <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
-                style="font-size: 11px;">
-                <i class="bi bi-house-door fs-5"></i>
-                <span>Home</span>
-            </a>
+    <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
+        style="z-index: 1030;">
+        <!-- Tombol Home -->
+        <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
+            style="font-size: 11px;">
+            <i class="bi bi-house-door fs-5"></i>
+            <span>Home</span>
+        </a>
 
-            <!-- Tombol Profil (Icon Doang) -->
-            <a href="{{ route('profile.show', auth()->id()) }}"
-                class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
-                <i class="bi bi-person-circle fs-5"></i>
-                <span>Profil</span>
-            </a>
+        <!-- Tombol Profil -->
+        <a href="{{ route('profile.show', auth()->id()) }}"
+            class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
+            <i class="bi bi-person-circle fs-5"></i>
+            <span>Profil</span>
+        </a>
 
-            <!-- Tombol Logout (Icon Doang) -->
-            <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
-                @csrf
-                <button type="button" onclick="confirmLogout()"
-                    class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
-                    style="font-size: 11px; cursor: pointer;">
-                    <i class="bi bi-box-arrow-right fs-5"></i>
-                    <span>Logout</span>
-                </button>
-            </form>
-        </div>
+        <!-- Tombol Logout -->
+        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
+            @csrf
+            <button type="button" onclick="confirmLogout()"
+                class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
+                style="font-size: 11px; cursor: pointer;">
+                <i class="bi bi-box-arrow-right fs-5"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+    </div>
     @endauth
 
     <!-- Bootstrap JS Bundle -->
@@ -429,78 +433,247 @@
             return element.innerHTML;
         }
 
+        function parseCommentResponse(response) {
+            return response.json().then(data => {
+                if (!response.ok) {
+                    const validationMessage = data.errors ? Object.values(data.errors).flat()[0] : null;
+                    throw new Error(validationMessage || data.message || 'Komentar gagal disimpan.');
+                }
+
+                return data;
+            });
+        }
+
+        function commentImageHtml(imagePath) {
+            if (!imagePath) return '';
+
+            const encodedPath = imagePath.split('/').map(encodeURIComponent).join('/');
+            const src = escapeHtml(`/storage/${encodedPath}`);
+
+            return `<img src="${src}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
+        }
+
+        function commentImageControlHtml() {
+            return `
+                <button type="button"
+                    class="btn btn-light border p-0 d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                    title="Tambah foto" aria-label="Tambah foto komentar">
+                    <i class="bi bi-image" aria-hidden="true"></i>
+                </button>
+                <input type="file" name="image" class="d-none comment-image-input"
+                    accept="image/jpeg,image/png,image/gif" aria-label="Pilih foto komentar">`;
+        }
+
+        function clearCommentImage(form) {
+            const input = form.querySelector('.comment-image-input');
+            const preview = form.querySelector('.comment-image-preview');
+            const previewImage = preview.querySelector('img');
+
+            if (previewImage.dataset.objectUrl) {
+                URL.revokeObjectURL(previewImage.dataset.objectUrl);
+                delete previewImage.dataset.objectUrl;
+            }
+
+            input.value = '';
+            previewImage.removeAttribute('src');
+            preview.classList.add('d-none');
+            preview.classList.remove('d-flex');
+        }
+
+        function changeCommentCount(postId, difference) {
+            const count = document.getElementById(`comment-count-${postId}`);
+
+            if (count) {
+                count.textContent = Math.max(0, Number(count.textContent) + difference);
+            }
+        }
+
+        function newCommentHtml(comment, postId, token) {
+            const initial = escapeHtml((comment.user.name || '?').charAt(0).toUpperCase());
+            const userName = escapeHtml(comment.user.name);
+            const commentBody = comment.body ? `<p class="mb-1 text-dark">${escapeHtml(comment.body)}</p>` : '';
+            const commentImage = commentImageHtml(comment.image_path);
+            const replyForm = `
+                <form id="reply-form-${comment.id}" class="mt-2 ms-4 d-none"
+                    onsubmit="submitReply(event, ${postId}, ${comment.id})">
+                    <input type="hidden" name="_token" value="${token}">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="content" id="reply-input-${comment.id}"
+                            class="px-3 border-0 form-control rounded-pill bg-light"
+                            placeholder="Balas ${userName}..." style="font-size: 12px;">
+                        ${commentImageControlHtml()}
+                        <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
+                            style="font-size: 11px;">Kirim</button>
+                    </div>
+                    <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
+                        <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
+                            style="width: 64px; height: 64px;">
+                        <button type="button"
+                            class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
+                    </div>
+                </form>`;
+
+            return `
+                <div class="mb-3" id="comment-container-${comment.id}" data-post-id="${postId}">
+                    <div class="gap-2 d-flex align-items-start">
+                        <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
+                            style="width: 28px; height: 28px; font-size: 12px;">${initial}</div>
+                        <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 13px;">
+                            <span class="fw-bold text-dark">${userName}</span>
+                            ${commentBody}
+                            ${commentImage}
+                            <div class="gap-2 d-flex align-items-center">
+                                <span class="text-muted" style="font-size: 10px;">Baru saja</span>
+                                <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
+                                    style="font-size: 11px;" onclick="toggleReplyForm(${comment.id})">Balas</button>
+                                <span class="text-muted" style="font-size: 10px;">•</span>
+                                <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
+                                    style="font-size: 11px;" onclick="confirmDeleteComment('/comments/${comment.id}', 'comment-container-${comment.id}')">
+                                    <i class="bi bi-trash"></i> Hapus
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 ms-4 ps-2 border-start" id="replies-list-${comment.id}"></div>
+                    ${replyForm}
+                </div>`;
+        }
+
+        function removeCommentFromPage(commentContainer) {
+            if (!commentContainer) return;
+
+            const postId = commentContainer.dataset.postId;
+            const removedCount = 1 + commentContainer.querySelectorAll('[id^="comment-container-"]').length;
+
+            if (postId) {
+                changeCommentCount(postId, -removedCount);
+            }
+
+            commentContainer.remove();
+        }
+
+        document.addEventListener('change', function(event) {
+            if (!event.target.matches('.comment-image-input')) return;
+
+            const file = event.target.files[0];
+            const form = event.target.closest('form');
+            const preview = form.querySelector('.comment-image-preview');
+            const previewImage = preview.querySelector('img');
+
+            if (!file) return;
+
+            if (previewImage.dataset.objectUrl) {
+                URL.revokeObjectURL(previewImage.dataset.objectUrl);
+            }
+
+            previewImage.src = URL.createObjectURL(file);
+            previewImage.dataset.objectUrl = previewImage.src;
+            preview.classList.remove('d-none');
+            preview.classList.add('d-flex');
+        });
+
+        document.addEventListener('click', function(event) {
+            const button = event.target.closest('.comment-image-trigger');
+            if (!button) return;
+
+            button.closest('form').querySelector('.comment-image-input').click();
+        });
+
+        document.addEventListener('click', function(event) {
+            const button = event.target.closest('.comment-image-remove');
+            if (!button) return;
+
+            clearCommentImage(button.closest('form'));
+        });
+
         // 3. Fungsi AJAX Kirim Komentar Utama
         function submitComment(event, postId) {
             event.preventDefault();
 
-            let input = document.getElementById(`comment-input-${postId}`);
-            let content = input.value.trim();
-            let form = document.getElementById(`comment-form-${postId}`);
-            let token = form.querySelector('input[name="_token"]').value;
+            const form = event.currentTarget;
+            const input = form.querySelector('input[name="content"]');
+            const content = input.value.trim();
+            const token = form.querySelector('input[name="_token"]').value;
+            const imageSelected = form.querySelector('input[name="image"]').files.length > 0;
 
-            if (!content) return;
+            if (!content && !imageSelected) {
+                Swal.fire('Komentar kosong', 'Isi teks atau pilih foto.', 'info');
+                return;
+            }
+
+            input.value = content;
 
             fetch(`/posts/${postId}/comments`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': token,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        content: content
-                    })
+                    body: new FormData(form)
                 })
-                .then(response => response.json())
+                .then(parseCommentResponse)
                 .then(data => {
                     if (data.success) {
-                        input.value = '';
-                        location.reload();
+                        document.getElementById(`comment-list-${postId}`).insertAdjacentHTML(
+                            'beforeend',
+                            newCommentHtml(data.comment, postId, token)
+                        );
+                        form.reset();
+                        clearCommentImage(form);
+                        changeCommentCount(postId, 1);
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => Swal.fire('Gagal mengirim', error.message, 'error'));
         }
 
         // 4. Fungsi AJAX Kirim Balasan Komentar (Reply)
         function submitReply(event, postId, parentId) {
             event.preventDefault();
 
-            const input = document.getElementById(`reply-input-${parentId}`);
+            const form = event.currentTarget;
+            const input = form.querySelector('input[name="content"]');
             const content = input.value.trim();
-            const form = document.getElementById(`reply-form-${parentId}`);
-            const token = document.querySelector('input[name="_token"]').value;
+            const token = form.querySelector('input[name="_token"]').value;
+            const imageSelected = form.querySelector('input[name="image"]').files.length > 0;
 
-            if (!content) return;
+            if (!content && !imageSelected) {
+                Swal.fire('Balasan kosong', 'Isi teks atau pilih foto.', 'info');
+                return;
+            }
+
+            input.value = content;
+            const formData = new FormData(form);
+            formData.set('parent_id', parentId);
 
             fetch(`/posts/${postId}/comments`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': token,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        content: content,
-                        parent_id: parentId
-                    })
+                    body: formData
                 })
-                .then(response => response.json())
+                .then(parseCommentResponse)
                 .then(data => {
                     if (data.success) {
                         input.value = '';
+                        clearCommentImage(form);
                         form.classList.add('d-none');
                         const userName = escapeHtml(data.comment.user.name);
-                        const commentBody = escapeHtml(data.comment.body);
+                        const commentBody = data.comment.body ?
+                            `<p class="mb-1 text-dark">${escapeHtml(data.comment.body)}</p>` : '';
+                        const commentImage = commentImageHtml(data.comment.image_path);
 
                         const newReplyHTML = `
-                    <div class="gap-2 mb-2 d-flex align-items-start" id="comment-container-${data.comment.id}">
+                    <div class="gap-2 mb-2 d-flex align-items-start" id="comment-container-${data.comment.id}" data-post-id="${postId}">
                         <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
                             style="width: 24px; height: 24px; font-size: 10px;">
                             ${userName.charAt(0).toUpperCase()}
                         </div>
                         <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 12px;">
                             <span class="fw-bold text-dark">${userName}</span>
-                            <p class="mb-1 text-dark">${commentBody}</p>
+                            ${commentBody}
+                            ${commentImage}
                             <div class="gap-2 d-flex align-items-center">
                                 <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
                                     style="font-size: 10px;"
@@ -517,9 +690,10 @@
                 `;
 
                         form.insertAdjacentHTML('beforebegin', newReplyHTML);
+                        changeCommentCount(postId, 1);
                     }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => Swal.fire('Gagal mengirim', error.message, 'error'));
         }
 
         // 5. Fungsi Konfirmasi Hapus Komentar / Balasan pakai SweetAlert2 (AJAX)
@@ -555,9 +729,7 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                if (commentContainer) {
-                                    commentContainer.remove();
-                                }
+                                removeCommentFromPage(commentContainer);
                             } else {
                                 Swal.fire('Gagal!', data.message || 'Gagal menghapus komentar.', 'error');
                             }
@@ -603,54 +775,7 @@
             if (!button) return;
 
             event.stopPropagation();
-
-            const deleteUrl = button.getAttribute('data-url');
-            const containerId = button.getAttribute('data-container');
-            const commentContainer = document.getElementById(containerId);
-
-            const token = document.querySelector('meta[name="csrf-token"]') ?
-                document.querySelector('meta[name="csrf-token"]').content :
-                document.querySelector('input[name="_token"]').value;
-
-            Swal.fire({
-                title: 'Yakin mau hapus?',
-                text: "Komentar yang dihapus gak bisa dikembalikan lagi!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#212529',
-                cancelButtonColor: '#dc3545',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(deleteUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': token,
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                _method: 'DELETE'
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                if (commentContainer) {
-                                    commentContainer.remove();
-                                }
-                            } else {
-                                Swal.fire('Gagal!', data.message || 'Gagal menghapus komentar.',
-                                    'error');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            Swal.fire('Error!', 'Terjadi kesalahan pada server.', 'error');
-                        });
-                }
-            });
+            confirmDeleteComment(button.dataset.url, button.dataset.container);
         });
 
         function confirmDelete(postId) {
@@ -669,16 +794,16 @@
                 }
             });
         }
-        @if (session('success'))
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: "{{ session('success') }}",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
+        @if(session('success'))
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: "{{ session('success') }}",
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
         @endif
     </script>
 </body>
