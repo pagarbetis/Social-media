@@ -19,6 +19,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('posts.like');
     Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
     Route::post('/comments/{comment}/reply', [CommentController::class, 'storeReply']);
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+
+    Route::get('/profile/password', [ProfileController::class, 'editPassword'])->name('password.edit');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+
     Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
