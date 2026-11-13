@@ -56,6 +56,11 @@
                             <h6 class="mb-0 fw-bold text-dark">{{ $user->name }}</h6>
                             <span class="text-muted"
                                 style="font-size: 11px;">{{ $post->created_at->diffForHumans() }}</span>
+                            @if ($post->location)
+                            <span class="text-muted" style="font-size: 11px;">
+                                <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $post->location }}
+                            </span>
+                            @endif
                         </div>
                     </div>
 
@@ -123,6 +128,20 @@
                                     <div class="gap-2 d-flex align-items-center">
                                         <span class="text-muted"
                                             style="font-size: 10px;">{{ $comment->created_at->format('d M Y, H:i') }}</span>
+                                        @if ($comment->location)
+                                        <span class="text-muted" style="font-size: 10px;">
+                                            <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $comment->location }}
+                                        </span>
+                                        @endif
+                                        <button type="button" id="comment-like-button-{{ $comment->id }}"
+                                            class="p-0 btn btn-link btn-sm text-muted text-decoration-none d-inline-flex align-items-center gap-1"
+                                            style="font-size: 11px;" title="Suka komentar" aria-label="Suka komentar"
+                                            aria-pressed="{{ $comment->likes->contains('id', auth()->id()) ? 'true' : 'false' }}"
+                                            onclick="toggleCommentLike({{ $comment->id }})">
+                                            <i class="bi {{ $comment->likes->contains('id', auth()->id()) ? 'bi-heart-fill text-danger' : 'bi-heart' }}"
+                                                id="comment-like-icon-{{ $comment->id }}" aria-hidden="true"></i>
+                                            <span id="comment-like-count-{{ $comment->id }}">{{ $comment->likes->count() }}</span>
+                                        </button>
                                         <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
                                             style="font-size: 11px;"
                                             onclick="toggleReplyForm({{ $comment->id }})">Balas</button>
@@ -156,17 +175,31 @@
                                     <div class="p-2 bg-light rounded-3 flex-grow-1"
                                         style="font-size: 12px;">
                                         <span
-                                            class="fw-bold text-dark">{{ $reply->user->name }}</span>
+                                            class="d-block fw-bold text-dark">{{ $reply->user->name }}</span>
                                         <p class="mb-1 text-dark">{{ $reply->body }}</p>
                                         @if ($reply->image_path)
                                         <img src="{{ asset('storage/' . $reply->image_path) }}"
-                                            alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3"
+                                            alt="Foto komentar" class="d-block mt-1 mb-2 img-fluid rounded-3"
                                             style="max-height: 200px; object-fit: contain;">
                                         @endif
 
                                         <div class="gap-2 d-flex align-items-center">
                                             <span class="text-muted"
                                                 style="font-size: 10px;">{{ $reply->created_at->format('d M Y, H:i') }}</span>
+                                            @if ($reply->location)
+                                            <span class="text-muted" style="font-size: 10px;">
+                                                <i class="bi bi-geo-alt" aria-hidden="true"></i> {{ $reply->location }}
+                                            </span>
+                                            @endif
+                                            <button type="button" id="comment-like-button-{{ $reply->id }}"
+                                                class="p-0 btn btn-link btn-sm text-muted text-decoration-none d-inline-flex align-items-center gap-1"
+                                                style="font-size: 10px;" title="Suka komentar" aria-label="Suka komentar"
+                                                aria-pressed="{{ $reply->likes->contains('id', auth()->id()) ? 'true' : 'false' }}"
+                                                onclick="toggleCommentLike({{ $reply->id }})">
+                                                <i class="bi {{ $reply->likes->contains('id', auth()->id()) ? 'bi-heart-fill text-danger' : 'bi-heart' }}"
+                                                    id="comment-like-icon-{{ $reply->id }}" aria-hidden="true"></i>
+                                                <span id="comment-like-count-{{ $reply->id }}">{{ $reply->likes->count() }}</span>
+                                            </button>
                                             <!-- Tombol Balas untuk Reply -->
                                             <button
                                                 class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
@@ -219,6 +252,8 @@
                                             class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
                                             style="font-size: 10px;">Kirim</button>
                                     </div>
+                                    <input type="hidden" name="share_location" value="1" disabled>
+                                    <input type="hidden" name="location" value="">
                                     <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
                                         <img src="" alt="Preview foto komentar"
                                             class="rounded object-fit-cover"
@@ -227,6 +262,10 @@
                                             class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
                                     </div>
                                 </form>
+
+                                <div class="mt-2 ms-3 ps-2 border-start" id="replies-list-{{ $reply->id }}">
+                                    <x-comment-replies :comments="$reply->replies" :post="$post" />
+                                </div>
                                 @endforeach
                                 @endif
                             </div>
@@ -254,6 +293,8 @@
                                     <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
                                         style="font-size: 11px;">Kirim</button>
                                 </div>
+                                <input type="hidden" name="share_location" value="1" disabled>
+                                <input type="hidden" name="location" value="">
                                 <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
                                     <img src="" alt="Preview foto komentar"
                                         class="rounded object-fit-cover"
@@ -268,7 +309,7 @@
                     </div>
 
                     <!-- Form Komentar Utama -->
-                    <form onsubmit="submitComment(event, {{ $post->id }})" class="gap-2 mt-3 d-flex"
+                    <form onsubmit="submitComment(event, {{ $post->id }})" class="gap-2 mt-3 d-flex flex-wrap"
                         id="comment-form-{{ $post->id }}">
                         @csrf
                         <input type="text" name="content" id="comment-input-{{ $post->id }}"
@@ -284,6 +325,8 @@
                             accept="image/jpeg,image/png,image/gif" aria-label="Pilih foto komentar">
                         <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill"
                             style="font-size: 12px;">Kirim</button>
+                        <input type="hidden" name="share_location" value="1" disabled>
+                        <input type="hidden" name="location" value="">
                     </form>
                 </div>
 

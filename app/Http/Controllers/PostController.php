@@ -18,10 +18,10 @@ class PostController extends Controller
                     ->oldest()
                     ->with([
                         'user',
+                        'likes',
                         'replies' => function ($q) {
-                            $q->oldest();
+                            $q->oldest()->with(['user', 'likes']);
                         },
-                        'replies.user',
                     ]);
             },
         ])->latest()->get();
@@ -31,10 +31,22 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'content' => 'required|max:500',
+        /**
+         * destroy
+         *
+         * @param  Post  $post
+         * @return void
+         */
+        $validated = $request->validate([
+            'content' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'share_location' => ['sometimes', 'accepted'],
+            'location' => ['nullable', 'string', 'max:100'],
         ]);
+
+        if (! $request->filled('content') && ! $request->hasFile('image')) {
+            return back()->withErrors(['content' => 'Postingan nggak boleh kosong, minimal isi teks atau foto!']);
+        }
 
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -45,9 +57,10 @@ class PostController extends Controller
             'user_id' => Auth::id(),
             'content' => $request->content,
             'image' => $imagePath,
+            'location' => $request->boolean('share_location') ? ($validated['location'] ?? null) : null,
         ]);
 
-        return redirect()->back()->with('success', 'Postingan berhasil di-upload!');
+        return redirect()->back();
     }
 
     public function destroy(Post $post)

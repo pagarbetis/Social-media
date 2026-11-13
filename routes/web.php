@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\LikeController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PostController;
-use App\Http\Controllers\LikeController;
-use App\Http\Controllers\CommentController;
 
 // Menampilkan halaman welcome awal
 Route::get('/', function () {
@@ -18,6 +19,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
     Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('posts.like');
     Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
+    Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment'])->name('comments.like');
     Route::post('/comments/{comment}/reply', [CommentController::class, 'storeReply']);
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
@@ -27,6 +29,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile/{id}', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

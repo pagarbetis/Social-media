@@ -165,6 +165,12 @@
             background: #343a40;
             color: #fff;
         }
+
+        .notification-menu {
+            width: min(22rem, calc(100vw - 24px));
+            max-height: 70vh;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -187,39 +193,71 @@
 
             <!-- Menu Desktop dengan Dropdown -->
             @auth
-            <div class="gap-3 d-none d-md-flex align-items-center">
-                <div class="dropdown">
-                    <button
-                        class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
-                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-person-circle"></i> Akun Saya
-                    </button>
-                    <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
-                        <li>
-                            <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
-                                <i class="bi bi-person me-2"></i> Profil Saya
-                            </a>
-                        </li>
-                        <li>
-                            <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
-                                <i class="bi bi-key me-2"></i> Ganti Password
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
-                                @csrf
-                                <button type="button" onclick="confirmLogout()"
-                                    class="py-2 bg-transparent border-0 dropdown-item small text-danger">
-                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
+                @php
+                    $recentNotifications = auth()->user()->notifications()->with('sender')->limit(8)->get();
+                    $unreadNotificationCount = auth()->user()->notifications()->where('is_read', false)->count();
+                @endphp
+                <div class="gap-2 d-flex align-items-center">
+                    <div class="dropdown">
+                        <button type="button"
+                            class="rounded-circle position-relative btn btn-outline-light btn-sm d-inline-flex align-items-center justify-content-center"
+                            aria-label="Notifikasi{{ $unreadNotificationCount ? ', '.$unreadNotificationCount.' belum dibaca' : '' }}"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                            @if ($unreadNotificationCount > 0)
+                                <span class="top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
+                                </span>
+                            @endif
+                        </button>
+                        <div class="p-0 shadow dropdown-menu dropdown-menu-end rounded-3 notification-menu">
+                            <div class="px-3 py-2 border-bottom fw-semibold">Notifikasi</div>
+                            @forelse ($recentNotifications as $notification)
+                                <form action="{{ route('notifications.read', $notification) }}" method="POST">
+                                    @csrf
+                                    <button type="submit"
+                                        class="px-3 py-2 text-start dropdown-item text-wrap {{ $notification->is_read ? '' : 'bg-light' }}">
+                                        <span class="d-block">{{ $notification->message }}</span>
+                                        <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
+                                    </button>
+                                </form>
+                            @empty
+                                <p class="px-3 py-3 mb-0 small text-muted">Belum ada notifikasi.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div class="dropdown d-none d-md-block">
+                        <button
+                            class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i> Akun Saya
+                        </button>
+                        <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
+                            <li>
+                                <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
+                                    <i class="bi bi-person me-2"></i> Profil Saya
+                                </a>
+                            </li>
+                            <li>
+                                <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
+                                    <i class="bi bi-key me-2"></i> Ganti Password
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
+                                    @csrf
+                                    <button type="button" onclick="confirmLogout()"
+                                        class="py-2 bg-transparent border-0 dropdown-item small text-danger">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
             @endauth
         </div>
     </nav>
@@ -231,33 +269,33 @@
 
     <!-- 3. Bottom Navbar Mobile: Hanya muncul di HP (d-flex d-md-none) -->
     @auth
-    <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
-        style="z-index: 1030;">
-        <!-- Tombol Home -->
-        <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
-            style="font-size: 11px;">
-            <i class="bi bi-house-door fs-5"></i>
-            <span>Home</span>
-        </a>
+        <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
+            style="z-index: 1030;">
+            <!-- Tombol Home -->
+            <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
+                style="font-size: 11px;">
+                <i class="bi bi-house-door fs-5"></i>
+                <span>Home</span>
+            </a>
 
-        <!-- Tombol Profil -->
-        <a href="{{ route('profile.show', auth()->id()) }}"
-            class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
-            <i class="bi bi-person-circle fs-5"></i>
-            <span>Profil</span>
-        </a>
+            <!-- Tombol Profil -->
+            <a href="{{ route('profile.show', auth()->id()) }}"
+                class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
+                <i class="bi bi-person-circle fs-5"></i>
+                <span>Profil</span>
+            </a>
 
-        <!-- Tombol Logout -->
-        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
-            @csrf
-            <button type="button" onclick="confirmLogout()"
-                class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
-                style="font-size: 11px; cursor: pointer;">
-                <i class="bi bi-box-arrow-right fs-5"></i>
-                <span>Logout</span>
-            </button>
-        </form>
-    </div>
+            <!-- Tombol Logout -->
+            <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
+                @csrf
+                <button type="button" onclick="confirmLogout()"
+                    class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
+                    style="font-size: 11px; cursor: pointer;">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
     @endauth
 
     <!-- Bootstrap JS Bundle -->
@@ -419,6 +457,47 @@
                 .catch(error => console.error('Error:', error));
         }
 
+        function toggleCommentLike(commentId) {
+            const button = document.getElementById(`comment-like-button-${commentId}`);
+            if (!button || button.disabled) return;
+
+            button.disabled = true;
+
+            fetch(`/comments/${commentId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Like komentar gagal disimpan.');
+                    }
+
+                    return response.json();
+                })
+                .then(data => {
+                    const icon = document.getElementById(`comment-like-icon-${commentId}`);
+                    const count = document.getElementById(`comment-like-count-${commentId}`);
+
+                    count.textContent = data.count;
+                    button.setAttribute('aria-pressed', String(data.liked));
+                    button.setAttribute('aria-label', data.liked ? 'Batal suka komentar' : 'Suka komentar');
+                    icon.classList.toggle('bi-heart-fill', data.liked);
+                    icon.classList.toggle('text-danger', data.liked);
+                    icon.classList.toggle('bi-heart', !data.liked);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Gagal memperbarui like', error.message, 'error');
+                })
+                .finally(() => {
+                    button.disabled = false;
+                });
+        }
+
         // 2. Fungsi Buka/Tutup Form Balas Komentar
         function toggleReplyForm(id) {
             const form = document.getElementById(`reply-form-${id}`);
@@ -431,6 +510,77 @@
             const element = document.createElement('span');
             element.textContent = value;
             return element.innerHTML;
+        }
+
+        function getDeviceCity() {
+            if (!navigator.geolocation) {
+                return Promise.reject(new Error('Browser ini tidak mendukung lokasi perangkat.'));
+            }
+
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(async position => {
+                    try {
+                        const params = new URLSearchParams({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            localityLanguage: 'id'
+                        });
+                        const response = await fetch(
+                            `https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
+
+                        if (!response.ok) {
+                            throw new Error('Layanan lokasi gagal mengambil nama kota.');
+                        }
+
+                        const data = await response.json();
+                        const city = [data.city, data.locality].find(value =>
+                            typeof value === 'string' && value.trim());
+
+                        if (!city) {
+                            throw new Error('Nama kota tidak tersedia untuk lokasi ini.');
+                        }
+
+                        resolve(city.trim());
+                    } catch (error) {
+                        reject(error);
+                    }
+                }, error => {
+                    const messages = {
+                        1: 'Izin lokasi ditolak. Izinkan akses lokasi lalu coba lagi.',
+                        2: 'Lokasi perangkat tidak tersedia.',
+                        3: 'Permintaan lokasi terlalu lama. Coba lagi.'
+                    };
+
+                    reject(new Error(messages[error.code] || 'Lokasi perangkat gagal diambil.'));
+                }, {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 300000
+                });
+            });
+        }
+
+        let deviceCity = null;
+        const hasPostForms = document.querySelector('#post-form, form[id^="comment-form-"]');
+        const deviceLocationReady = hasPostForms ? getDeviceCity().then(city => {
+            deviceCity = city;
+            const status = document.getElementById('location-sharing-status');
+            // if (status) status.textContent = `Lokasi aktif: ${city}. Kota akan tampil publik pada post dan komentar.`;
+
+            return city;
+        }).catch(() => {
+            const status = document.getElementById('location-sharing-status');
+            // if (status) status.textContent = 'Lokasi tidak dibagikan. Post dan komentar tetap bisa dikirim tanpa lokasi.';
+
+            return null;
+        }) : Promise.resolve(null);
+
+        function setFormLocation(form, city) {
+            const locationInput = form.querySelector('input[name="location"]');
+            const shareLocationInput = form.querySelector('input[name="share_location"]');
+
+            locationInput.value = city || '';
+            shareLocationInput.disabled = !city;
         }
 
         function parseCommentResponse(response) {
@@ -450,18 +600,32 @@
             const encodedPath = imagePath.split('/').map(encodeURIComponent).join('/');
             const src = escapeHtml(`/storage/${encodedPath}`);
 
-            return `<img src="${src}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
+            return `<img src="${src}" alt="Foto komentar" class="d-block mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
         }
 
         function commentImageControlHtml() {
             return `
                 <button type="button"
-                    class="btn btn-light border p-0 d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                    class="p-0 border btn btn-light d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
                     title="Tambah foto" aria-label="Tambah foto komentar">
                     <i class="bi bi-image" aria-hidden="true"></i>
                 </button>
                 <input type="file" name="image" class="d-none comment-image-input"
                     accept="image/jpeg,image/png,image/gif" aria-label="Pilih foto komentar">`;
+        }
+
+        function commentLocationControlHtml() {
+            return `
+                <input type="hidden" name="share_location" value="1" disabled>
+                <input type="hidden" name="location" value="${escapeHtml(deviceCity || '')}">`;
+        }
+
+        function commentLocationHtml(location) {
+            if (!location) return '';
+
+            return `<span class="text-muted" style="font-size: 10px;">
+                <i class="bi bi-geo-alt" aria-hidden="true"></i> ${escapeHtml(location)}
+            </span>`;
         }
 
         function clearCommentImage(form) {
@@ -488,6 +652,19 @@
             }
         }
 
+        function commentLikeHtml(commentId, liked = false, count = 0) {
+            const iconClass = liked ? 'bi-heart-fill text-danger' : 'bi-heart';
+            const label = liked ? 'Batal suka komentar' : 'Suka komentar';
+
+            return `<button type="button" id="comment-like-button-${commentId}"
+                class="gap-1 p-0 btn btn-link btn-sm text-muted text-decoration-none d-inline-flex align-items-center"
+                style="font-size: 11px;" title="${label}" aria-label="${label}" aria-pressed="${liked}"
+                onclick="toggleCommentLike(${commentId})">
+                <i class="bi ${iconClass}" id="comment-like-icon-${commentId}" aria-hidden="true"></i>
+                <span id="comment-like-count-${commentId}">${count}</span>
+            </button>`;
+        }
+
         function newCommentHtml(comment, postId, token) {
             const initial = escapeHtml((comment.user.name || '?').charAt(0).toUpperCase());
             const userName = escapeHtml(comment.user.name);
@@ -505,6 +682,7 @@
                         <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
                             style="font-size: 11px;">Kirim</button>
                     </div>
+                    ${commentLocationControlHtml()}
                     <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
                         <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
                             style="width: 64px; height: 64px;">
@@ -519,11 +697,13 @@
                         <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
                             style="width: 28px; height: 28px; font-size: 12px;">${initial}</div>
                         <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 13px;">
-                            <span class="fw-bold text-dark">${userName}</span>
+                            <span class="d-block fw-bold text-dark">${userName}</span>
                             ${commentBody}
                             ${commentImage}
                             <div class="gap-2 d-flex align-items-center">
                                 <span class="text-muted" style="font-size: 10px;">Baru saja</span>
+                                ${commentLocationHtml(comment.location)}
+                                ${commentLikeHtml(comment.id)}
                                 <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
                                     style="font-size: 11px;" onclick="toggleReplyForm(${comment.id})">Balas</button>
                                 <span class="text-muted" style="font-size: 10px;">•</span>
@@ -587,10 +767,12 @@
         });
 
         // 3. Fungsi AJAX Kirim Komentar Utama
-        function submitComment(event, postId) {
+        async function submitComment(event, postId) {
             event.preventDefault();
 
             const form = event.currentTarget;
+            if (form.dataset.submitting) return;
+
             const input = form.querySelector('input[name="content"]');
             const content = input.value.trim();
             const token = form.querySelector('input[name="_token"]').value;
@@ -601,36 +783,53 @@
                 return;
             }
 
+            const submitButton = form.querySelector('button[type="submit"]');
+            const submitLabel = submitButton.textContent;
+            form.dataset.submitting = 'true';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Mengirim...';
             input.value = content;
 
-            fetch(`/posts/${postId}/comments`, {
+            try {
+                const city = await deviceLocationReady;
+                setFormLocation(form, city);
+                const response = await fetch(`/posts/${postId}/comments`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': token,
                         'Accept': 'application/json'
                     },
                     body: new FormData(form)
-                })
-                .then(parseCommentResponse)
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById(`comment-list-${postId}`).insertAdjacentHTML(
-                            'beforeend',
-                            newCommentHtml(data.comment, postId, token)
-                        );
-                        form.reset();
-                        clearCommentImage(form);
-                        changeCommentCount(postId, 1);
-                    }
-                })
-                .catch(error => Swal.fire('Gagal mengirim', error.message, 'error'));
+                });
+                const data = await parseCommentResponse(response);
+
+                if (!data.success) {
+                    throw new Error('Komentar gagal disimpan.');
+                }
+
+                document.getElementById(`comment-list-${postId}`).insertAdjacentHTML(
+                    'beforeend',
+                    newCommentHtml(data.comment, postId, token)
+                );
+                form.reset();
+                clearCommentImage(form);
+                changeCommentCount(postId, 1);
+            } catch (error) {
+                Swal.fire('Gagal mengirim', error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = submitLabel;
+                delete form.dataset.submitting;
+            }
         }
 
         // 4. Fungsi AJAX Kirim Balasan Komentar (Reply)
-        function submitReply(event, postId, parentId) {
+        async function submitReply(event, postId, parentId) {
             event.preventDefault();
 
             const form = event.currentTarget;
+            if (form.dataset.submitting) return;
+
             const input = form.querySelector('input[name="content"]');
             const content = input.value.trim();
             const token = form.querySelector('input[name="_token"]').value;
@@ -641,59 +840,105 @@
                 return;
             }
 
+            const submitButton = form.querySelector('button[type="submit"]');
+            const submitLabel = submitButton.textContent;
+            form.dataset.submitting = 'true';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Mengirim...';
             input.value = content;
-            const formData = new FormData(form);
-            formData.set('parent_id', parentId);
 
-            fetch(`/posts/${postId}/comments`, {
+            try {
+                const city = await deviceLocationReady;
+                setFormLocation(form, city);
+                const formData = new FormData(form);
+                formData.set('parent_id', parentId);
+
+                const response = await fetch(`/posts/${postId}/comments`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': token,
                         'Accept': 'application/json'
                     },
                     body: formData
-                })
-                .then(parseCommentResponse)
-                .then(data => {
-                    if (data.success) {
-                        input.value = '';
-                        clearCommentImage(form);
-                        form.classList.add('d-none');
-                        const userName = escapeHtml(data.comment.user.name);
-                        const commentBody = data.comment.body ?
-                            `<p class="mb-1 text-dark">${escapeHtml(data.comment.body)}</p>` : '';
-                        const commentImage = commentImageHtml(data.comment.image_path);
+                });
+                const data = await parseCommentResponse(response);
 
-                        const newReplyHTML = `
-                    <div class="gap-2 mb-2 d-flex align-items-start" id="comment-container-${data.comment.id}" data-post-id="${postId}">
-                        <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
-                            style="width: 24px; height: 24px; font-size: 10px;">
-                            ${userName.charAt(0).toUpperCase()}
+                if (!data.success) {
+                    throw new Error('Balasan gagal disimpan.');
+                }
+
+                form.reset();
+                clearCommentImage(form);
+                form.classList.add('d-none');
+                const userName = escapeHtml(data.comment.user.name);
+                const commentBody = data.comment.body ?
+                    `<p class="mb-1 text-dark">${escapeHtml(data.comment.body)}</p>` : '';
+                const commentImage = commentImageHtml(data.comment.image_path);
+                const commentLocation = commentLocationHtml(data.comment.location);
+                const replyForm = `
+                    <form id="reply-form-${data.comment.id}" class="mt-2 ms-3 d-none"
+                        onsubmit="submitReply(event, ${postId}, ${data.comment.id})">
+                        <input type="hidden" name="_token" value="${token}">
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="content" id="reply-input-${data.comment.id}"
+                                class="px-3 border-0 form-control rounded-pill bg-light"
+                                placeholder="Balas ${userName}..." style="font-size: 11px;">
+                            ${commentImageControlHtml()}
+                            <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
+                                style="font-size: 10px;">Kirim</button>
                         </div>
-                        <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 12px;">
-                            <span class="fw-bold text-dark">${userName}</span>
-                            ${commentBody}
-                            ${commentImage}
-                            <div class="gap-2 d-flex align-items-center">
-                                <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
-                                    style="font-size: 10px;"
-                                    onclick="toggleReplyForm(${data.comment.id})">Balas</button>
-                                <span class="text-muted" style="font-size: 10px;">•</span>
-                                <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
-                                    style="font-size: 10px; z-index: 10; position: relative;"
-                                    onclick="confirmDeleteComment('/comments/${data.comment.id}', 'comment-container-${data.comment.id}')">
-                                    <i class="bi bi-trash"></i> Hapus
-                                </button>
+                        ${commentLocationControlHtml()}
+                        <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
+                            <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
+                                style="width: 64px; height: 64px;">
+                            <button type="button"
+                                class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
+                        </div>
+                    </form>`;
+
+                const newReplyHTML = `
+                    <div class="mb-2" id="comment-container-${data.comment.id}" data-post-id="${postId}">
+                        <div class="gap-2 d-flex align-items-start">
+                            <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
+                                style="width: 24px; height: 24px; font-size: 10px;">
+                                ${userName.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 12px;">
+                                <span class="d-block fw-bold text-dark">${userName}</span>
+                                ${commentBody}
+                                ${commentImage}
+                                <div class="gap-2 d-flex align-items-center">
+                                    ${commentLocation}
+                                    ${commentLikeHtml(data.comment.id)}
+                                    <button type="button" class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
+                                        style="font-size: 10px;" onclick="toggleReplyForm(${data.comment.id})">Balas</button>
+                                    <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
+                                        style="font-size: 10px;"
+                                        onclick="confirmDeleteComment('/comments/${data.comment.id}', 'comment-container-${data.comment.id}')">
+                                        <i class="bi bi-trash"></i> Hapus
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                        <div class="mt-2 ms-3 ps-2 border-start" id="replies-list-${data.comment.id}"></div>
+                        ${replyForm}
                     </div>
                 `;
 
-                        form.insertAdjacentHTML('beforebegin', newReplyHTML);
-                        changeCommentCount(postId, 1);
-                    }
-                })
-                .catch(error => Swal.fire('Gagal mengirim', error.message, 'error'));
+                const repliesList = document.getElementById(`replies-list-${parentId}`);
+                if (!repliesList) {
+                    throw new Error('Daftar balasan tidak ditemukan.');
+                }
+
+                repliesList.insertAdjacentHTML('beforeend', newReplyHTML);
+                changeCommentCount(postId, 1);
+            } catch (error) {
+                Swal.fire('Gagal mengirim', error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = submitLabel;
+                delete form.dataset.submitting;
+            }
         }
 
         // 5. Fungsi Konfirmasi Hapus Komentar / Balasan pakai SweetAlert2 (AJAX)
@@ -794,17 +1039,31 @@
                 }
             });
         }
-        @if(session('success'))
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: "{{ session('success') }}",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
+        @if (session('success'))
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: "{{ session('success') }}",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
         @endif
+
+        function updateCount(textarea) {
+            const maxLength = 500;
+            const currentLength = textarea.value.length;
+
+            document.getElementById('char-count').innerText = `${currentLength} / ${maxLength}`;
+
+            const warning = document.getElementById('warning-text');
+            if (currentLength >= maxLength) {
+                warning.style.display = 'inline';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
     </script>
 </body>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\Notification;
 use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,8 @@ class CommentController extends Controller
         $rules = [
             'content' => ['nullable', 'string', 'max:255', 'required_without:image'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048', 'required_without:content'],
+            'share_location' => ['sometimes', 'accepted'],
+            'location' => ['nullable', 'string', 'max:100'],
         ];
 
         if ($parent === null) {
@@ -34,13 +37,30 @@ class CommentController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $parent ??= isset($validated['parent_id'])
+            ? Comment::where('post_id', $post->id)->findOrFail($validated['parent_id'])
+            : null;
 
         $comment = $post->comments()->create([
             'user_id' => $request->user()->id,
             'body' => $validated['content'] ?? null,
-            'parent_id' => $parent?->id ?? $validated['parent_id'] ?? null,
+            'parent_id' => $parent?->id,
             'image_path' => $request->file('image')?->store('comments', 'public'),
+            'location' => $request->boolean('share_location') ? $validated['location'] ?? null : null,
         ]);
+
+        $recipientId = $parent?->user_id ?? $post->user_id;
+
+        if ($recipientId !== $request->user()->id) {
+            Notification::create([
+                'user_id' => $recipientId,
+                'sender_id' => $request->user()->id,
+                'post_id' => $post->id,
+                'message' => $parent
+                    ? $request->user()->name.' membalas komentar Anda.'
+                    : $request->user()->name.' mengomentari postingan Anda.',
+            ]);
+        }
 
         return response()->json([
             'success' => true,

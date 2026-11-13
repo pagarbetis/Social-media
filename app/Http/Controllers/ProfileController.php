@@ -13,7 +13,18 @@ class ProfileController extends Controller
     public function show($id)
     {
         $user = User::with(['posts' => function ($query) {
-            $query->latest();
+            $query->latest()->with([
+                'likes',
+                'comments' => function ($comments) {
+                    $comments->whereNull('parent_id')->oldest()->with([
+                        'user',
+                        'likes',
+                        'replies' => function ($replies) {
+                            $replies->oldest()->with(['user', 'likes']);
+                        },
+                    ]);
+                },
+            ]);
         }])->findOrFail($id);
 
         return view('profile.show', compact('user'));
