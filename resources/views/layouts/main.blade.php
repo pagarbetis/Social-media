@@ -5,11 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+    <meta name="user-id" content="{{ auth()->id() }}">
+    @endauth
     <title>@yield('title', 'Thread Anjay')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <!-- CDN SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @vite(['resources/js/app.js'])
 
     <!-- Style CSS untuk Smart Sticky Header & Mobile Bottom Nav -->
     <style>
@@ -171,6 +176,50 @@
             max-height: 70vh;
             overflow-y: auto;
         }
+
+        .my-compact-toast {
+            width: 260px !important;
+            min-height: 50px !important;
+            padding: 8px 12px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        /* Sembunyikan footer/timer bar bawaan kalau bikin berantakan */
+        .my-compact-toast .swal2-timer-progress-bar {
+            background: rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* Mengatur container isi toast */
+        .my-compact-toast .swal2-html-container {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Styling Title / Teks Pesan */
+        .my-compact-toast .swal2-title {
+            margin: 0 !important;
+            font-size: 0.8rem !important;
+            text-align: left !important;
+            color: #333 !important;
+            line-height: 1.3 !important;
+            display: block !important;
+        }
+
+        /* Styling Ikon agar pas di sebelah kiri */
+        .my-compact-toast .swal2-icon {
+            width: 22px !important;
+            height: 22px !important;
+            min-width: 22px !important;
+            margin: 0 10px 0 0 !important;
+            border-width: 2px !important;
+        }
+
+        .my-compact-toast .swal2-icon .swal2-icon-content {
+            font-size: 14px !important;
+        }
     </style>
 </head>
 
@@ -199,18 +248,18 @@
             @endphp
             <div class="gap-2 d-flex align-items-center">
                 <div class="dropdown">
-                    <button type="button"
+                    <button type="button" id="notification-bell"
                         class="rounded-circle position-relative btn btn-outline-light btn-sm d-inline-flex align-items-center justify-content-center"
                         aria-label="Notifikasi{{ $unreadNotificationCount ? ', '.$unreadNotificationCount.' belum dibaca' : '' }}"
                         data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-bell-fill" aria-hidden="true"></i>
                         @if ($unreadNotificationCount > 0)
-                        <span class="top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger">
+                        <span id="notification-badge" class="top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger">
                             {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
                         </span>
                         @endif
                     </button>
-                    <div class="p-0 shadow dropdown-menu dropdown-menu-end rounded-3 notification-menu">
+                    <div id="notification-dropdown" class="p-0 shadow dropdown-menu dropdown-menu-end rounded-3 notification-menu">
                         <div class="px-3 py-2 border-bottom fw-semibold">Notifikasi</div>
                         @forelse ($recentNotifications as $notification)
                         <form action="{{ route('notifications.read', $notification) }}" method="POST">
@@ -222,7 +271,7 @@
                             </button>
                         </form>
                         @empty
-                        <p class="px-3 py-3 mb-0 small text-muted">Belum ada notifikasi.</p>
+                        <p id="notification-empty" class="px-3 py-3 mb-0 small text-muted">Belum ada notifikasi.</p>
                         @endforelse
                     </div>
                 </div>
@@ -565,12 +614,10 @@
         const deviceLocationReady = hasPostForms ? getDeviceCity().then(city => {
             deviceCity = city;
             const status = document.getElementById('location-sharing-status');
-            // if (status) status.textContent = `Lokasi aktif: ${city}. Kota akan tampil publik pada post dan komentar.`;
 
             return city;
         }).catch(() => {
             const status = document.getElementById('location-sharing-status');
-            // if (status) status.textContent = 'Lokasi tidak dibagikan. Post dan komentar tetap bisa dikirim tanpa lokasi.';
 
             return null;
         }) : Promise.resolve(null);
@@ -1234,6 +1281,73 @@
                 }
             });
         }
+    </script>
+
+    <!-- Realtime Notifications via Laravel Reverb -->
+    <script>
+        function initRealtimeNotifications() {
+            if (typeof window.Echo === 'undefined') {
+                setTimeout(initRealtimeNotifications, 100);
+                return;
+            }
+
+            var userIdMeta = document.querySelector('meta[name="user-id"]');
+            if (!userIdMeta) return;
+
+            var userId = userIdMeta.content;
+
+            window.Echo.private('notifications.' + userId)
+                .listen('.notification.created', function(e) {
+                    var emptyState = document.getElementById('notification-empty');
+                    if (emptyState) emptyState.remove();
+
+                    var dropdown = document.getElementById('notification-dropdown');
+                    if (dropdown) {
+                        var header = dropdown.querySelector('.fw-semibold');
+                        var token = document.querySelector('meta[name="csrf-token"]').content;
+                        var formHtml = '<form action="' + e.read_url + '" method="POST">' +
+                            '<input type="hidden" name="_token" value="' + token + '">' +
+                            '<button type="submit" class="px-3 py-2 text-start dropdown-item text-wrap bg-light">' +
+                            '<span class="d-block">' + escapeHtml(e.message) + '</span>' +
+                            '<small class="text-muted">Baru saja</small>' +
+                            '</button></form>';
+                        if (header) {
+                            header.insertAdjacentHTML('afterend', formHtml);
+                        }
+                    }
+
+                    var bell = document.getElementById('notification-bell');
+                    if (bell) {
+                        var badge = document.getElementById('notification-badge');
+                        if (badge) {
+                            var current = parseInt(badge.textContent) || 0;
+                            current++;
+                            badge.textContent = current > 9 ? '9+' : current;
+                        } else {
+                            var newBadge = document.createElement('span');
+                            newBadge.id = 'notification-badge';
+                            newBadge.className = 'top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger';
+                            newBadge.textContent = '1';
+                            bell.appendChild(newBadge);
+                        }
+                    }
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        title: e.message,
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        customClass: {
+                            popup: 'my-compact-toast'
+                        }
+                    });
+                });
+        }
+
+        initRealtimeNotifications();
     </script>
 </body>
 
