@@ -7,6 +7,68 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Cara Menjalankan Program
+
+### Persyaratan
+
+- PHP 8.3 atau lebih baru
+- Composer
+- Node.js & npm
+- MySQL
+
+### Instalasi
+
+```bash
+# 1. Install dependency PHP
+composer install
+
+# 2. Install dependency JavaScript
+npm install
+
+# 3. Salin file environment
+cp .env.example .env
+
+# 4. Generate application key
+php artisan key:generate
+
+# 5. Konfigurasi database di file .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD)
+
+# 6. Jalankan migrasi database
+php artisan migrate
+
+# 7. Build asset frontend
+npm run build
+```
+
+### Menjalankan Aplikasi
+
+Buka **3 terminal** terpisah:
+
+```bash
+# Terminal 1 — Server Laravel (http://localhost:8000)
+php artisan serve
+
+# Terminal 2 — Vite dev server (hot reload frontend)
+npm run dev
+
+# Terminal 3 — Reverb WebSocket server (untuk notifikasi realtime)
+php artisan reverb:start
+```
+
+Buka `http://localhost:8000` di browser. Daftar akun baru, lalu mulai posting, like, dan komentar.
+
+### Notifikasi Realtime
+
+Notifikasi realtime menggunakan **Laravel Reverb** dan akan otomatis muncul saat ada user lain yang:
+
+- Menyukai postingan Anda
+- Mengomentari postingan Anda
+- Membalas komentar Anda
+
+Notifikasi muncul sebagai toast di pojok kanan atas dan langsung bertambah di dropdown lonceng, tanpa perlu reload halaman.
+
+> Tidak perlu menjalankan `php artisan queue:work` karena broadcast menggunakan `ShouldBroadcastNow` (sinkron langsung saat request).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

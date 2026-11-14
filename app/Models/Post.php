@@ -25,4 +25,9 @@ class Post extends Model
     {
         return $this->hasMany(Comment::class)->latest();
     }
+
+    public function images()
+    {
+        return $this->hasMany(PostImage::class);
+    }
 }

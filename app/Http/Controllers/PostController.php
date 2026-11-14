@@ -13,6 +13,7 @@ class PostController extends Controller
         $posts = Post::with([
             'user',
             'likes',
+            'images', 
             'comments' => function ($query) {
                 $query->whereNull('parent_id')
                     ->oldest()
@@ -31,34 +32,36 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        /**
-         * destroy
-         *
-         * @param  Post  $post
-         * @return void
-         */
         $validated = $request->validate([
             'content' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'nullable|array', // <-- Ubah validasi jadi array
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048', // <-- Validasi tiap file di dalam array
             'share_location' => ['sometimes', 'accepted'],
             'location' => ['nullable', 'string', 'max:100'],
         ]);
 
-        if (! $request->filled('content') && ! $request->hasFile('image')) {
+        // Cek jika konten kosong DAN tidak ada file gambar yang diunggah
+        if (! $request->filled('content') && ! $request->hasFile('images')) {
             return back()->withErrors(['content' => 'Postingan nggak boleh kosong, minimal isi teks atau foto!']);
         }
 
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('posts', 'public');
-        }
-
-        Post::create([
+        // 1. Buat postingan utamanya terlebih dahulu (kolom 'image' tunggal dihapus/diabaikan)
+        $post = Post::create([
             'user_id' => Auth::id(),
             'content' => $request->content,
-            'image' => $imagePath,
             'location' => $request->boolean('share_location') ? ($validated['location'] ?? null) : null,
         ]);
+
+        // 2. Jika ada banyak foto yang diunggah, loop dan simpan ke tabel post_images
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $path = $file->store('posts', 'public');
+
+                $post->images()->create([
+                    'image_path' => $path,
+                ]);
+            }
+        }
 
         return redirect()->back();
     }

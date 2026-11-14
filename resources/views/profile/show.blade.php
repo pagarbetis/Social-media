@@ -79,13 +79,7 @@
 
                 <p class="mb-3 text-dark" style="font-size: 15px;">{{ $post->content }}</p>
 
-                @if ($post->image)
-                <div class="mb-3">
-                    <img src="{{ asset('storage/' . $post->image) }}"
-                        class="shadow-sm img-fluid rounded-4 w-100"
-                        style="max-height: 400px; object-fit: cover;">
-                </div>
-                @endif
+                <x-post-images :post="$post" />
 
                 <div class="gap-3 pt-3 d-flex align-items-center border-top text-muted small">
                     <!-- Tombol Like AJAX Murni Tanpa Form & Tanpa Refresh -->
@@ -390,27 +384,37 @@
                             <form id="reply-form-{{ $comment->id }}" class="mt-2 ms-4 d-none"
                                 onsubmit="submitReply(event, {{ $post->id }}, {{ $comment->id }})">
                                 @csrf
-                                <div class="input-group input-group-sm">
+
+                                <!-- Bungkus input dan tombol dalam satu baris flex -->
+                                <div class="d-flex align-items-center gap-2">
                                     <input type="text" name="content"
                                         id="reply-input-{{ $comment->id }}"
-                                        class="px-3 border-0 form-control rounded-pill bg-light"
+                                        class="px-3 border-0 form-control form-control-sm rounded-pill bg-light flex-grow-1"
                                         placeholder="Balas {{ $comment->user->name }}..."
                                         style="font-size: 12px;">
+
+                                    <!-- Tombol Foto -->
                                     <button type="button"
-                                        class="btn btn-light border p-0 d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                                        class="btn btn-light border p-1 rounded-circle d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                                        style="width: 30px; height: 30px; flex-shrink: 0;"
                                         title="Tambah foto"
                                         aria-label="Tambah foto komentar">
-                                        <i class="bi bi-image" aria-hidden="true"></i>
+                                        <i class="bi bi-image" aria-hidden="true" style="font-size: 12px;"></i>
                                     </button>
+
                                     <input type="file" name="image"
                                         class="d-none comment-image-input"
                                         accept="image/jpeg,image/png,image/gif"
                                         aria-label="Pilih foto komentar">
-                                    <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
-                                        style="font-size: 11px;">Kirim</button>
+
+                                    <!-- Tombol Kirim -->
+                                    <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill"
+                                        style="font-size: 11px; flex-shrink: 0;">Kirim</button>
                                 </div>
+
                                 <input type="hidden" name="share_location" value="1" disabled>
                                 <input type="hidden" name="location" value="">
+
                                 <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
                                     <img src="" alt="Preview foto komentar"
                                         class="rounded object-fit-cover"
@@ -424,25 +428,38 @@
                         @endforeach
                     </div>
 
-                    <!-- Form Komentar Utama -->
-                    <form onsubmit="submitComment(event, {{ $post->id }})" class="gap-2 mt-3 d-flex flex-wrap"
+                    <!-- 2. FORM KOMENTAR UTAMA -->
+                    <form onsubmit="submitComment(event, {{ $post->id }})" class="mt-3"
                         id="comment-form-{{ $post->id }}">
                         @csrf
-                        <input type="text" name="content" id="comment-input-{{ $post->id }}"
-                            class="px-3 border-0 form-control form-control-sm rounded-pill bg-light"
-                            placeholder="Balas postingan...">
-                        <button type="button"
-                            class="btn btn-light border p-0 d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
-                            title="Tambah foto"
-                            aria-label="Tambah foto komentar">
-                            <i class="bi bi-image" aria-hidden="true"></i>
-                        </button>
-                        <input type="file" name="image" class="d-none comment-image-input"
-                            accept="image/jpeg,image/png,image/gif" aria-label="Pilih foto komentar">
-                        <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill"
-                            style="font-size: 12px;">Kirim</button>
+                        <div class="gap-2 d-flex align-items-center">
+                            <input type="text" name="content" id="comment-input-{{ $post->id }}"
+                                class="px-3 border-0 form-control form-control-sm rounded-pill bg-light flex-grow-1"
+                                placeholder="Balas postingan...">
+
+                            <button type="button"
+                                class="btn btn-light border p-1 rounded-circle d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                                style="width: 30px; height: 30px; flex-shrink: 0;"
+                                title="Tambah foto" aria-label="Tambah foto komentar">
+                                <i class="bi bi-image" aria-hidden="true" style="font-size: 12px;"></i>
+                            </button>
+
+                            <input type="file" name="image" class="d-none comment-image-input"
+                                accept="image/jpeg,image/png,image/gif" aria-label="Pilih foto komentar">
+
+                            <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill"
+                                style="font-size: 12px; flex-shrink: 0;">Kirim</button>
+                        </div>
+
                         <input type="hidden" name="share_location" value="1" disabled>
                         <input type="hidden" name="location" value="">
+
+                        <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
+                            <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
+                                style="width: 64px; height: 64px;">
+                            <button type="button"
+                                class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
+                        </div>
                     </form>
                 </div>
 

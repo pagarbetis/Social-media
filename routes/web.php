@@ -34,6 +34,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.readAll');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
 require __DIR__ . '/auth.php';

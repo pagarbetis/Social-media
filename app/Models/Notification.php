@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use App\Events\NotificationCreated;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
+    use Prunable;
+
     protected static function booted(): void
     {
         static::created(function (Notification $notification) {
@@ -26,6 +30,15 @@ class Notification extends Model
         return [
             'is_read' => 'boolean',
         ];
+    }
+
+    /**
+     * Notifikasi yang dihapus otomatis oleh `model:prune`:
+     * semua yang umurnya lebih dari 24 jam.
+     */
+    public function prunable(): Builder
+    {
+        return static::where('created_at', '<=', now()->subDay());
     }
 
     public function sender(): BelongsTo

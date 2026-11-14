@@ -15,6 +15,7 @@ class ProfileController extends Controller
         $user = User::with(['posts' => function ($query) {
             $query->latest()->with([
                 'likes',
+                'images',
                 'comments' => function ($comments) {
                     $comments->whereNull('parent_id')->oldest()->with([
                         'user',

@@ -11,6 +11,7 @@
     <title>@yield('title', 'Thread Anjay')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
     <!-- CDN SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -359,10 +360,12 @@
         window.addEventListener('scroll', function() {
             let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-            if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
-                navbar.classList.add('header-hidden');
-            } else if (scrollTop < lastScrollTop) {
-                navbar.classList.remove('header-hidden');
+            if (navbar) {
+                if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
+                    navbar.classList.add('header-hidden');
+                } else if (scrollTop < lastScrollTop) {
+                    navbar.classList.remove('header-hidden');
+                }
             }
 
             lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
@@ -609,26 +612,188 @@
             });
         }
 
+        // Lokasi diambil secara lazy (saat pertama kali dibutuhkan)
         let deviceCity = null;
-        const hasPostForms = document.querySelector('#post-form, form[id^="comment-form-"]');
-        const deviceLocationReady = hasPostForms ? getDeviceCity().then(city => {
-            deviceCity = city;
-            const status = document.getElementById('location-sharing-status');
+        let deviceLocationPromise = null;
 
-            return city;
-        }).catch(() => {
-            const status = document.getElementById('location-sharing-status');
+        function getDeviceLocationReady() {
+            if (!deviceLocationPromise) {
+                deviceLocationPromise = getDeviceCity()
+                    .then(city => {
+                        deviceCity = city;
+                        return city;
+                    })
+                    .catch(error => {
+                        console.warn('Lokasi gagal diambil:', error.message);
+                        return null;
+                    });
+            }
+            return deviceLocationPromise;
+        }
 
-            return null;
-        }) : Promise.resolve(null);
+        // Minta izin lebih awal setelah halaman siap
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.querySelector('#post-form, form[id^="comment-form-"]')) {
+                getDeviceLocationReady();
+            }
+        });
 
+        // Membuat input location/share_location otomatis kalau belum ada di form
         function setFormLocation(form, city) {
-            const locationInput = form.querySelector('input[name="location"]');
-            const shareLocationInput = form.querySelector('input[name="share_location"]');
+            let locationInput = form.querySelector('input[name="location"]');
+            let shareLocationInput = form.querySelector('input[name="share_location"]');
+
+            if (!locationInput) {
+                locationInput = document.createElement('input');
+                locationInput.type = 'hidden';
+                locationInput.name = 'location';
+                form.appendChild(locationInput);
+            }
+
+            if (!shareLocationInput) {
+                shareLocationInput = document.createElement('input');
+                shareLocationInput.type = 'hidden';
+                shareLocationInput.name = 'share_location';
+                shareLocationInput.value = '1';
+                form.appendChild(shareLocationInput);
+            }
 
             locationInput.value = city || '';
             shareLocationInput.disabled = !city;
         }
+
+        // ==========================================
+        // LOGIKA UTAMA: MULTI-IMAGE PREVIEW + SUBMIT FORM
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const postForm = document.getElementById('post-form');
+
+            if (postForm) {
+                const imageInput = document.getElementById('post-image');
+                const previewContainer = document.getElementById('image-preview-container');
+                let dt = new DataTransfer();
+
+                // 1. Penanganan Multi-Image Akumulatif
+                if (imageInput) {
+                    imageInput.addEventListener('change', function(event) {
+                        for (let i = 0; i < event.target.files.length; i++) {
+                            dt.items.add(event.target.files[i]);
+                        }
+                        imageInput.files = dt.files;
+                        previewContainer.innerHTML = '';
+
+                        if (dt.files.length > 0) {
+                            previewContainer.classList.remove('d-none');
+                            previewContainer.classList.add('d-flex', 'flex-wrap', 'gap-2');
+
+                            Array.from(dt.files).forEach((file, index) => {
+                                const reader = new FileReader();
+
+                                reader.onload = function(e) {
+                                    const wrapper = document.createElement('div');
+                                    wrapper.className = 'position-relative';
+                                    wrapper.style.width = '80px';
+                                    wrapper.style.height = '80px';
+
+                                    const img = document.createElement('img');
+                                    img.src = e.target.result;
+                                    img.className = 'border w-100 h-100 object-fit-cover rounded-3 shadow-sm';
+
+                                    // Tombol hapus satuan (X) di tiap thumbnail
+                                    const deleteBtn = document.createElement('button');
+                                    deleteBtn.type = 'button';
+                                    deleteBtn.innerHTML = '&times;';
+                                    deleteBtn.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border-0';
+                                    deleteBtn.style.cursor = 'pointer';
+                                    deleteBtn.style.width = '20px';
+                                    deleteBtn.style.height = '20px';
+                                    deleteBtn.style.fontSize = '12px';
+                                    deleteBtn.style.display = 'flex';
+                                    deleteBtn.style.alignItems = 'center';
+                                    deleteBtn.style.justifyContent = 'center';
+
+                                    deleteBtn.onclick = function() {
+                                        dt.items.remove(index);
+                                        imageInput.files = dt.files;
+                                        wrapper.remove();
+
+                                        if (dt.files.length === 0) {
+                                            previewContainer.classList.add('d-none');
+                                        }
+                                    };
+
+                                    wrapper.appendChild(img);
+                                    wrapper.appendChild(deleteBtn);
+                                    previewContainer.appendChild(wrapper);
+                                }
+
+                                reader.readAsDataURL(file);
+                            });
+                        } else {
+                            previewContainer.classList.add('d-none');
+                        }
+                    });
+                }
+
+                // 2. Validasi & Submit Form Utama (Beserta Lokasi & Loading State)
+                const postContent = document.getElementById('postContent');
+                const charCounter = document.getElementById('charCounter');
+                const warningMessage = document.getElementById('warningMessage');
+                const submitBtn = document.getElementById('submit-btn');
+                const btnText = document.getElementById('btn-text');
+                const btnSpinner = document.getElementById('btn-spinner');
+
+                function checkLength(textarea) {
+                    const length = textarea.value.length;
+                    if (charCounter) charCounter.textContent = `${length}/500`;
+                    if (warningMessage) warningMessage.style.display = length > 500 ? 'inline' : 'none';
+                }
+
+                if (postContent) {
+                    checkLength(postContent);
+                    postContent.addEventListener('input', function() {
+                        checkLength(this);
+                    });
+                }
+
+                postForm.addEventListener('submit', async function(event) {
+                    if (postContent && postContent.value.length > 500) {
+                        event.preventDefault();
+                        checkLength(postContent);
+                        return;
+                    }
+
+                    event.preventDefault();
+                    if (postForm.dataset.submitting) return;
+
+                    postForm.dataset.submitting = 'true';
+                    if (submitBtn) submitBtn.disabled = true;
+                    if (btnText) btnText.textContent = 'Menyiapkan lokasi...';
+                    if (btnSpinner) btnSpinner.classList.remove('d-none');
+
+                    try {
+                        // Ambil dan set lokasi perangkat ke input tersembunyi sebelum dikirim
+                        const city = await getDeviceLocationReady();
+                        setFormLocation(postForm, city);
+
+                        if (btnText) btnText.textContent = 'Mengirim...';
+                        postForm.submit();
+                    } catch (error) {
+                        console.error(error);
+                        delete postForm.dataset.submitting;
+                        if (submitBtn) submitBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'Kirim';
+                        if (btnSpinner) btnSpinner.classList.add('d-none');
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire('Gagal mengirim', error.message, 'error');
+                        } else {
+                            alert('Gagal mengirim: ' + error.message);
+                        }
+                    }
+                });
+            }
+        });
 
         function parseCommentResponse(response) {
             return response.json().then(data => {
@@ -636,17 +801,14 @@
                     const validationMessage = data.errors ? Object.values(data.errors).flat()[0] : null;
                     throw new Error(validationMessage || data.message || 'Komentar gagal disimpan.');
                 }
-
                 return data;
             });
         }
 
         function commentImageHtml(imagePath) {
             if (!imagePath) return '';
-
             const encodedPath = imagePath.split('/').map(encodeURIComponent).join('/');
             const src = escapeHtml(`/storage/${encodedPath}`);
-
             return `<img src="${src}" alt="Foto komentar" class="d-block mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
         }
 
@@ -669,31 +831,32 @@
 
         function commentLocationHtml(location) {
             if (!location) return '';
-
             return `<span class="text-muted comment-location-badge" style="font-size: 10px;">
                 <i class="bi bi-geo-alt" aria-hidden="true"></i> ${escapeHtml(location)}
             </span>`;
         }
 
+        // Aman kalau form tidak punya elemen preview / input
         function clearCommentImage(form) {
             const input = form.querySelector('.comment-image-input');
             const preview = form.querySelector('.comment-image-preview');
-            const previewImage = preview.querySelector('img');
+            const previewImage = preview ? preview.querySelector('img') : null;
 
-            if (previewImage.dataset.objectUrl) {
+            if (previewImage && previewImage.dataset.objectUrl) {
                 URL.revokeObjectURL(previewImage.dataset.objectUrl);
                 delete previewImage.dataset.objectUrl;
             }
 
-            input.value = '';
-            previewImage.removeAttribute('src');
-            preview.classList.add('d-none');
-            preview.classList.remove('d-flex');
+            if (input) input.value = '';
+            if (previewImage) previewImage.removeAttribute('src');
+            if (preview) {
+                preview.classList.add('d-none');
+                preview.classList.remove('d-flex');
+            }
         }
 
         function changeCommentCount(postId, difference) {
             const count = document.getElementById(`comment-count-${postId}`);
-
             if (count) {
                 count.textContent = Math.max(0, Number(count.textContent) + difference);
             }
@@ -712,22 +875,80 @@
             </button>`;
         }
 
-        function newCommentHtml(comment, postId, token) {
-            const initial = escapeHtml((comment.user.name || '?').charAt(0).toUpperCase());
+        // Form edit untuk komentar buatan JS
+        function commentEditFormHtml(comment, token, inputFont, btnFont) {
+            const removeImage = comment.image_path ? `
+                <div class="mt-1 form-check ms-2">
+                    <input class="form-check-input" type="checkbox" name="remove_image" value="1"
+                        id="remove-image-${comment.id}">
+                    <label class="form-check-label text-danger" for="remove-image-${comment.id}"
+                        style="font-size: 10px;">Hapus gambar lama</label>
+                </div>` : '';
+
+            return `
+                <form id="edit-form-${comment.id}" class="mt-2 edit-comment-form d-none" enctype="multipart/form-data"
+                    onsubmit="submitEditComment(event, ${comment.id})">
+                    <input type="hidden" name="_token" value="${token}">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="body" id="edit-input-${comment.id}"
+                            class="px-3 border-0 form-control rounded-pill bg-light"
+                            value="${escapeHtml(comment.body || '')}" placeholder="Edit komentar..."
+                            style="font-size: ${inputFont}px;">
+                        ${commentImageControlHtml()}
+                        <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
+                            style="font-size: ${btnFont}px;">Simpan</button>
+                        <button type="button" class="px-3 btn btn-light btn-sm rounded-pill ms-1 text-danger"
+                            style="font-size: ${btnFont}px;" onclick="toggleEditForm(${comment.id})">Batal</button>
+                    </div>
+                    ${removeImage}
+                    <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
+                        <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
+                            style="width: 64px; height: 64px;">
+                        <button type="button"
+                            class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
+                    </div>
+                </form>`;
+        }
+
+        // Template komentar utama (isReply=false) dan balasan (isReply=true)
+        function buildCommentHtml(comment, postId, token, isReply = false) {
             const userName = escapeHtml(comment.user.name);
-            const commentBody = comment.body ? `<p class="mb-1 text-dark">${escapeHtml(comment.body)}</p>` : '';
-            const commentImage = commentImageHtml(comment.image_path);
+            const initial = escapeHtml((comment.user.name || '?').charAt(0).toUpperCase());
+            const s = isReply ? {
+                wrap: 'mb-2',
+                avatar: 24,
+                avatarFont: 10,
+                bodyFont: 12,
+                action: 10,
+                margin: 'ms-3',
+                formInput: 11,
+                formBtn: 10
+            } : {
+                wrap: 'mb-3',
+                avatar: 28,
+                avatarFont: 12,
+                bodyFont: 13,
+                action: 11,
+                margin: 'ms-4',
+                formInput: 12,
+                formBtn: 11
+            };
+
+            const commentBody = `<p class="mb-1 text-dark" id="comment-body-${comment.id}">${escapeHtml(comment.body || '')}</p>`;
+            const commentImage = comment.image_path ?
+                `<div id="comment-image-container-${comment.id}">${commentImageHtml(comment.image_path)}</div>` : '';
+
             const replyForm = `
-                <form id="reply-form-${comment.id}" class="mt-2 ms-4 d-none"
+                <form id="reply-form-${comment.id}" class="mt-2 ${s.margin} d-none"
                     onsubmit="submitReply(event, ${postId}, ${comment.id})">
                     <input type="hidden" name="_token" value="${token}">
                     <div class="input-group input-group-sm">
                         <input type="text" name="content" id="reply-input-${comment.id}"
                             class="px-3 border-0 form-control rounded-pill bg-light"
-                            placeholder="Balas ${userName}..." style="font-size: 12px;">
+                            placeholder="Balas ${userName}..." style="font-size: ${s.formInput}px;">
                         ${commentImageControlHtml()}
                         <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
-                            style="font-size: 11px;">Kirim</button>
+                            style="font-size: ${s.formBtn}px;">Kirim</button>
                     </div>
                     ${commentLocationControlHtml()}
                     <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
@@ -739,54 +960,59 @@
                 </form>`;
 
             return `
-                <div class="mb-3" id="comment-container-${comment.id}" data-post-id="${postId}">
+                <div class="${s.wrap}" id="comment-container-${comment.id}" data-post-id="${postId}">
                     <div class="gap-2 d-flex align-items-start">
-                        <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
-                            style="width: 28px; height: 28px; font-size: 12px;">${initial}</div>
-                        <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 13px;">
+                        <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                            style="width: ${s.avatar}px; height: ${s.avatar}px; font-size: ${s.avatarFont}px;">${initial}</div>
+                        <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: ${s.bodyFont}px;">
                             <span class="d-block fw-bold text-dark">${userName}</span>
                             ${commentBody}
                             ${commentImage}
                             <div class="gap-2 d-flex align-items-center flex-wrap">
                                 ${commentLocationHtml(comment.location)}
                                 <span class="text-muted" style="font-size: 10px;">Baru saja</span>
-                                <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
-                                    style="font-size: 11px;" onclick="toggleReplyForm(${comment.id})">Balas</button>
-                                ${commentLikeHtml(comment.id)}
+                                <button type="button" class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
+                                    style="font-size: ${s.action}px;" onclick="toggleReplyForm(${comment.id})">Balas</button>
+                                ${commentLikeHtml(comment.id, false, 0, s.action)}
+                                <button type="button" class="p-0 border-0 btn btn-link text-primary text-decoration-none"
+                                    style="font-size: ${s.action}px;" onclick="toggleEditForm(${comment.id})">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
                                 <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
-                                    style="font-size: 11px; z-index: 10; position: relative;" onclick="confirmDeleteComment('/comments/${comment.id}', 'comment-container-${comment.id}')">
+                                    style="font-size: ${s.action}px; z-index: 10; position: relative;"
+                                    onclick="confirmDeleteComment('/comments/${comment.id}', 'comment-container-${comment.id}')">
                                     <i class="bi bi-trash"></i> Hapus
                                 </button>
                             </div>
+                            ${commentEditFormHtml(comment, token, s.formInput, s.formBtn)}
                         </div>
                     </div>
-                    <div class="mt-2 ms-4 ps-2 border-start" id="replies-list-${comment.id}"></div>
+                    <div class="mt-2 ${s.margin} ps-2 border-start" id="replies-list-${comment.id}"></div>
                     ${replyForm}
                 </div>`;
         }
 
         function removeCommentFromPage(commentContainer) {
             if (!commentContainer) return;
-
             const postId = commentContainer.dataset.postId;
             const removedCount = 1 + commentContainer.querySelectorAll('[id^="comment-container-"]').length;
-
             if (postId) {
                 changeCommentCount(postId, -removedCount);
             }
-
             commentContainer.remove();
         }
 
+        // Preview foto komentar
         document.addEventListener('change', function(event) {
             if (!event.target.matches('.comment-image-input')) return;
-
             const file = event.target.files[0];
             const form = event.target.closest('form');
-            const preview = form.querySelector('.comment-image-preview');
-            const previewImage = preview.querySelector('img');
+            const preview = form ? form.querySelector('.comment-image-preview') : null;
 
-            if (!file) return;
+            if (!file || !preview) return;
+
+            const previewImage = preview.querySelector('img');
+            if (!previewImage) return;
 
             if (previewImage.dataset.objectUrl) {
                 URL.revokeObjectURL(previewImage.dataset.objectUrl);
@@ -801,28 +1027,26 @@
         document.addEventListener('click', function(event) {
             const button = event.target.closest('.comment-image-trigger');
             if (!button) return;
-
-            button.closest('form').querySelector('.comment-image-input').click();
+            const input = button.closest('form').querySelector('.comment-image-input');
+            if (input) input.click();
         });
 
         document.addEventListener('click', function(event) {
             const button = event.target.closest('.comment-image-remove');
             if (!button) return;
-
             clearCommentImage(button.closest('form'));
         });
 
-        // 3. Fungsi AJAX Kirim Komentar Utama
         async function submitComment(event, postId) {
             event.preventDefault();
-
             const form = event.currentTarget;
             if (form.dataset.submitting) return;
 
             const input = form.querySelector('input[name="content"]');
             const content = input.value.trim();
             const token = form.querySelector('input[name="_token"]').value;
-            const imageSelected = form.querySelector('input[name="image"]').files.length > 0;
+            const imageInput = form.querySelector('input[name="image"]');
+            const imageSelected = imageInput && imageInput.files.length > 0;
 
             if (!content && !imageSelected) {
                 Swal.fire('Komentar kosong', 'Isi teks atau pilih foto.', 'info');
@@ -837,7 +1061,7 @@
             input.value = content;
 
             try {
-                const city = await deviceLocationReady;
+                const city = await getDeviceLocationReady();
                 setFormLocation(form, city);
                 const response = await fetch(`/posts/${postId}/comments`, {
                     method: 'POST',
@@ -853,14 +1077,21 @@
                     throw new Error('Komentar gagal disimpan.');
                 }
 
-                document.getElementById(`comment-list-${postId}`).insertAdjacentHTML(
-                    'beforeend',
-                    newCommentHtml(data.comment, postId, token)
-                );
+                const commentList = document.getElementById(`comment-list-${postId}`);
+                if (commentList) {
+                    commentList.insertAdjacentHTML(
+                        'beforeend',
+                        buildCommentHtml(data.comment, postId, token, false)
+                    );
+                } else {
+                    console.warn(`Elemen #comment-list-${postId} tidak ditemukan di halaman ini.`);
+                }
+
                 form.reset();
                 clearCommentImage(form);
                 changeCommentCount(postId, 1);
             } catch (error) {
+                console.error(error);
                 Swal.fire('Gagal mengirim', error.message, 'error');
             } finally {
                 submitButton.disabled = false;
@@ -869,17 +1100,16 @@
             }
         }
 
-        // 4. Fungsi AJAX Kirim Balasan Komentar (Reply)
         async function submitReply(event, postId, parentId) {
             event.preventDefault();
-
             const form = event.currentTarget;
             if (form.dataset.submitting) return;
 
             const input = form.querySelector('input[name="content"]');
             const content = input.value.trim();
             const token = form.querySelector('input[name="_token"]').value;
-            const imageSelected = form.querySelector('input[name="image"]').files.length > 0;
+            const imageInput = form.querySelector('input[name="image"]');
+            const imageSelected = imageInput && imageInput.files.length > 0;
 
             if (!content && !imageSelected) {
                 Swal.fire('Balasan kosong', 'Isi teks atau pilih foto.', 'info');
@@ -894,7 +1124,7 @@
             input.value = content;
 
             try {
-                const city = await deviceLocationReady;
+                const city = await getDeviceLocationReady();
                 setFormLocation(form, city);
                 const formData = new FormData(form);
                 formData.set('parent_id', parentId);
@@ -913,73 +1143,22 @@
                     throw new Error('Balasan gagal disimpan.');
                 }
 
-                form.reset();
-                clearCommentImage(form);
-                form.classList.add('d-none');
-                const userName = escapeHtml(data.comment.user.name);
-                const commentBody = data.comment.body ?
-                    `<p class="mb-1 text-dark">${escapeHtml(data.comment.body)}</p>` : '';
-                const commentImage = commentImageHtml(data.comment.image_path);
-                const commentLocation = commentLocationHtml(data.comment.location);
-                const replyForm = `
-                    <form id="reply-form-${data.comment.id}" class="mt-2 ms-3 d-none"
-                        onsubmit="submitReply(event, ${postId}, ${data.comment.id})">
-                        <input type="hidden" name="_token" value="${token}">
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="content" id="reply-input-${data.comment.id}"
-                                class="px-3 border-0 form-control rounded-pill bg-light"
-                                placeholder="Balas ${userName}..." style="font-size: 11px;">
-                            ${commentImageControlHtml()}
-                            <button type="submit" class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
-                                style="font-size: 10px;">Kirim</button>
-                        </div>
-                        ${commentLocationControlHtml()}
-                        <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
-                            <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
-                                style="width: 64px; height: 64px;">
-                            <button type="button"
-                                class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
-                        </div>
-                    </form>`;
-
-                const newReplyHTML = `
-                    <div class="mb-2" id="comment-container-${data.comment.id}" data-post-id="${postId}">
-                        <div class="gap-2 d-flex align-items-start">
-                            <div class="text-white rounded-circle bg-secondary d-flex align-items-center justify-content-center fw-bold"
-                                style="width: 24px; height: 24px; font-size: 10px;">
-                                ${userName.charAt(0).toUpperCase()}
-                            </div>
-                            <div class="p-2 bg-light rounded-3 flex-grow-1" style="font-size: 12px;">
-                                <span class="d-block fw-bold text-dark">${userName}</span>
-                                ${commentBody}
-                                ${commentImage}
-                                <div class="gap-2 d-flex align-items-center flex-wrap">
-                                    <span class="text-muted" style="font-size: 10px;">Baru saja</span>
-                                    ${commentLocation}
-                                    <button type="button" class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
-                                        style="font-size: 10px;" onclick="toggleReplyForm(${data.comment.id})">Balas</button>
-                                    ${commentLikeHtml(data.comment.id, false, 0, 10)}
-                                    <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
-                                        style="font-size: 10px; z-index: 10; position: relative;"
-                                        onclick="confirmDeleteComment('/comments/${data.comment.id}', 'comment-container-${data.comment.id}')">
-                                        <i class="bi bi-trash"></i> Hapus
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-2 ms-3 ps-2 border-start" id="replies-list-${data.comment.id}"></div>
-                        ${replyForm}
-                    </div>
-                `;
-
                 const repliesList = document.getElementById(`replies-list-${parentId}`);
                 if (!repliesList) {
                     throw new Error('Daftar balasan tidak ditemukan.');
                 }
 
-                repliesList.insertAdjacentHTML('beforeend', newReplyHTML);
+                repliesList.insertAdjacentHTML(
+                    'beforeend',
+                    buildCommentHtml(data.comment, postId, token, true)
+                );
+
+                form.reset();
+                clearCommentImage(form);
+                form.classList.add('d-none');
                 changeCommentCount(postId, 1);
             } catch (error) {
+                console.error(error);
                 Swal.fire('Gagal mengirim', error.message, 'error');
             } finally {
                 submitButton.disabled = false;
@@ -988,7 +1167,101 @@
             }
         }
 
-        // 5. Fungsi Konfirmasi Hapus Komentar / Balasan pakai SweetAlert2 (AJAX)
+        // ==========================================
+        // EDIT KOMENTAR
+        // ==========================================
+        function toggleEditForm(id) {
+            const form = document.getElementById(`edit-form-${id}`);
+            if (!form) return;
+
+            const opening = form.classList.contains('d-none');
+            form.classList.toggle('d-none');
+
+            if (opening) {
+                const input = document.getElementById(`edit-input-${id}`);
+                if (input) input.focus();
+            } else {
+                clearCommentImage(form);
+            }
+        }
+
+        async function submitEditComment(event, commentId) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            if (form.dataset.submitting) return;
+
+            const input = form.querySelector('input[name="body"]');
+            const body = input.value.trim();
+            const token = form.querySelector('input[name="_token"]').value;
+
+            if (!body) {
+                Swal.fire('Komentar kosong', 'Isi teks komentar.', 'info');
+                return;
+            }
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            const submitLabel = submitButton.textContent;
+            form.dataset.submitting = 'true';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Menyimpan...';
+
+            try {
+                const formData = new FormData(form);
+                formData.set('body', body);
+                formData.set('_method', 'PUT');
+
+                const response = await fetch(`/comments/${commentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': token,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+                const data = await parseCommentResponse(response);
+
+                if (!data.success) {
+                    throw new Error('Komentar gagal diupdate.');
+                }
+
+                // Update teks
+                const bodyEl = document.getElementById(`comment-body-${commentId}`);
+                if (bodyEl) bodyEl.textContent = data.comment.body || '';
+
+                // Update gambar
+                const oldImage = document.getElementById(`comment-image-container-${commentId}`);
+                if (oldImage) oldImage.remove();
+
+                if (data.comment.image_path && bodyEl) {
+                    const wrapper = document.createElement('div');
+                    wrapper.id = `comment-image-container-${commentId}`;
+                    wrapper.innerHTML = commentImageHtml(data.comment.image_path);
+                    bodyEl.insertAdjacentElement('afterend', wrapper);
+                }
+
+                // Sinkronkan checkbox "hapus gambar lama"
+                const removeCheckbox = form.querySelector('input[name="remove_image"]');
+                if (removeCheckbox) {
+                    if (data.comment.image_path) {
+                        removeCheckbox.checked = false;
+                    } else {
+                        const holder = removeCheckbox.closest('.form-check');
+                        if (holder) holder.remove();
+                    }
+                }
+
+                clearCommentImage(form);
+                form.classList.add('d-none');
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Gagal menyimpan', error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = submitLabel;
+                delete form.dataset.submitting;
+            }
+        }
+
         function confirmDeleteComment(deleteUrl, containerId) {
             const token = document.querySelector('meta[name="csrf-token"]') ?
                 document.querySelector('meta[name="csrf-token"]').content :
@@ -1033,257 +1306,9 @@
                 }
             });
         }
-
-        // 6. Fungsi Konfirmasi Logout pakai SweetAlert2
-        function confirmLogout() {
-            Swal.fire({
-                title: 'Mau keluar aplikasi?',
-                text: "Sesi kamu bakal diakhiri, bro!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#212529',
-                cancelButtonColor: '#dc3545',
-                confirmButtonText: 'Ya, Logout!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let desktopForm = document.getElementById('logout-form');
-                    let mobileForm = document.getElementById('logout-form-mobile');
-
-                    if (desktopForm && window.innerWidth >= 768) {
-                        desktopForm.submit();
-                    } else if (mobileForm) {
-                        mobileForm.submit();
-                    } else {
-                        desktopForm.submit();
-                    }
-                }
-            });
-        }
-
-        // Global Event Delegation untuk tombol hapus dengan class 'delete-btn'
-        document.addEventListener('click', function(event) {
-            const button = event.target.closest('.delete-btn');
-            if (!button) return;
-
-            event.stopPropagation();
-            confirmDeleteComment(button.dataset.url, button.dataset.container);
-        });
-
-        function confirmDelete(postId) {
-            Swal.fire({
-                title: 'Apakah kamu yakin?',
-                text: 'Postingan yang dihapus tidak dapat dikembalikan!',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Ya, hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById(`delete-form-${postId}`).submit();
-                }
-            });
-        }
-        @if(session('success'))
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: "{{ session('success') }}",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-        @endif
-
-        function updateCount(textarea) {
-            const maxLength = 500;
-            const currentLength = textarea.value.length;
-
-            document.getElementById('char-count').innerText = `${currentLength} / ${maxLength}`;
-
-            const warning = document.getElementById('warning-text');
-            if (currentLength >= maxLength) {
-                warning.style.display = 'inline';
-            } else {
-                warning.style.display = 'none';
-            }
-        }
-
-        // Fungsi untuk memunculkan / menyembunyikan form edit
-        function toggleEditForm(commentId) {
-            const form = document.getElementById(`edit-form-${commentId}`);
-            if (form) {
-                form.classList.toggle('d-none');
-            }
-        }
-
-        // Fungsi AJAX untuk submit update komentar/balasan
-        function submitEditComment(event, commentId) {
-            event.preventDefault();
-            const form = document.getElementById(`edit-form-${commentId}`);
-            const formData = new FormData(form);
-
-            fetch(`/comments/${commentId}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    },
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 1. Update teks komentar
-                        const bodyElement = document.getElementById(`comment-body-${commentId}`);
-                        if (bodyElement) {
-                            bodyElement.innerText = data.comment.body;
-                        }
-
-                        // 2. Update gambar komentar
-                        let imageContainer = document.getElementById(`comment-image-container-${commentId}`);
-                        if (data.comment.image_path) {
-                            const imageUrl = `/storage/${data.comment.image_path}`;
-                            if (imageContainer) {
-                                imageContainer.innerHTML = `<img src="${imageUrl}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
-                            } else {
-                                const textEl = document.getElementById(`comment-body-${commentId}`);
-                                const newImgDiv = document.createElement('div');
-                                newImgDiv.id = `comment-image-container-${commentId}`;
-                                newImgDiv.innerHTML = `<img src="${imageUrl}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
-                                textEl.insertAdjacentElement('afterend', newImgDiv);
-                            }
-                        } else {
-                            if (imageContainer) {
-                                imageContainer.remove();
-                            }
-                        }
-
-                        // 3. TAMPILKAN KEMBALI LOKASI JIKA ADA
-                        if (data.comment.location) {
-                            const commentContainer = document.getElementById(`comment-container-${commentId}`);
-                            if (commentContainer) {
-                                // Cari apakah elemen lokasi sudah ada sebelumnya
-                                let locationSpan = commentContainer.querySelector('.comment-location-badge');
-
-                                if (!locationSpan) {
-                                    // Jika belum ada, cari elemen tanggal/waktu di dalam container ini untuk dijadikan patokan posisi
-                                    // Asumsi elemen waktu dibungkus text-muted dengan format tanggal
-                                    const timeElements = commentContainer.querySelectorAll('.text-muted');
-                                    let targetElement = null;
-
-                                    timeElements.forEach(el => {
-                                        // Cari elemen yang keliatannya nampilin tanggal (bukan tombol balas/like)
-                                        if (el.textContent.includes('2026') || el.textContent.includes('AM') || el.textContent.includes('PM') || el.textContent.includes(':')) {
-                                            targetElement = el;
-                                        }
-                                    });
-
-                                    if (targetElement) {
-                                        const newLoc = document.createElement('span');
-                                        newLoc.className = 'text-muted comment-location-badge me-2';
-                                        newLoc.style.fontSize = '10px';
-                                        newLoc.innerHTML = `<i class="bi bi-geo-alt" aria-hidden="true"></i> ${data.comment.location}`;
-                                        targetElement.before(newLoc);
-                                    }
-                                } else {
-                                    locationSpan.innerHTML = `<i class="bi bi-geo-alt" aria-hidden="true"></i> ${data.comment.location}`;
-                                }
-                            }
-                        }
-
-                        // Tutup form edit
-                        toggleEditForm(commentId);
-
-                        // Reset checkbox hapus gambar
-                        const removeCheckbox = form.querySelector('input[name="remove_image"]');
-                        if (removeCheckbox) removeCheckbox.checked = false;
-                    } else {
-                        alert('Gagal memperbarui komentar.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Terjadi kesalahan pada server.');
-                });
-        }
     </script>
 
-    <!-- Script buat Preview Foto & Loading State Tombol Kirim -->
-    <script>
-        // 1. Preview Gambar
-        const postForm = document.getElementById('post-form');
-
-        if (postForm) {
-            const imageInput = document.getElementById('post-image');
-            const previewContainer = document.getElementById('image-preview-container');
-            const previewImage = document.getElementById('image-preview');
-            const removeButton = document.getElementById('remove-image');
-
-            imageInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    previewImage.src = URL.createObjectURL(file);
-                    previewContainer.classList.remove('d-none');
-                }
-            });
-
-            removeButton.addEventListener('click', function() {
-                imageInput.value = '';
-                previewImage.src = '#';
-                previewContainer.classList.add('d-none');
-            });
-
-            // 2. Loading State saat Form Postingan Disubmit
-            const postContent = document.getElementById('postContent');
-            const charCounter = document.getElementById('charCounter');
-            const warningMessage = document.getElementById('warningMessage');
-            const submitBtn = document.getElementById('submit-btn');
-            const btnText = document.getElementById('btn-text');
-            const btnSpinner = document.getElementById('btn-spinner');
-
-            function checkLength(textarea) {
-                const length = textarea.value.length;
-                charCounter.textContent = `${length}/500`;
-                warningMessage.style.display = length > 500 ? 'inline' : 'none';
-            }
-
-            checkLength(postContent);
-
-            postForm.addEventListener('submit', async function(event) {
-                if (postContent.value.length > 500) {
-                    event.preventDefault();
-                    checkLength(postContent);
-                    return;
-                }
-
-                event.preventDefault();
-                if (postForm.dataset.submitting) return;
-
-                postForm.dataset.submitting = 'true';
-                submitBtn.disabled = true;
-                btnText.textContent = 'Menyiapkan lokasi...';
-                btnSpinner.classList.remove('d-none');
-
-                try {
-                    setFormLocation(postForm, await deviceLocationReady);
-                    btnText.textContent = 'Mengirim...';
-                    postForm.submit();
-                } catch (error) {
-                    delete postForm.dataset.submitting;
-                    submitBtn.disabled = false;
-                    btnText.textContent = 'Kirim';
-                    btnSpinner.classList.add('d-none');
-                    Swal.fire('Gagal mengirim', error.message, 'error');
-                }
-            });
-        }
-    </script>
-
-    <!-- Realtime Notifications via Laravel Reverb -->
+        <!-- Realtime Notifications via Laravel Reverb -->
     <script>
         function initRealtimeNotifications() {
             if (typeof window.Echo === 'undefined') {
@@ -1351,15 +1376,35 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             var bellButton = document.getElementById('notification-bell');
+            if (!bellButton) return;
 
-            if (bellButton) {
-                bellButton.addEventListener('click', function() {
-                    var badge = document.getElementById('notification-badge');
-                    if (badge) {
-                        badge.remove();
+            bellButton.addEventListener('click', function() {
+                var badge = document.getElementById('notification-badge') ||
+                    bellButton.querySelector('.badge');
+
+                if (!badge) return;
+                badge.remove();
+
+                // Tandai terbaca di database (butuh route notifications.readAll)
+                var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                fetch('/notifications/read-all', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': tokenMeta ? tokenMeta.content : '',
+                        'Accept': 'application/json'
                     }
+                }).catch(function(error) {
+                    console.error('Gagal menandai notifikasi terbaca:', error);
                 });
-            }
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
+    <script>
+        const lightbox = GLightbox({
+            touchNavigation: true,
+            loop: true,
         });
     </script>
 </body>
