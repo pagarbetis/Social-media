@@ -1348,6 +1348,19 @@
         }
 
         initRealtimeNotifications();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var bellButton = document.getElementById('notification-bell');
+
+            if (bellButton) {
+                bellButton.addEventListener('click', function() {
+                    var badge = document.getElementById('notification-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 
