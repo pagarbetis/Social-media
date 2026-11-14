@@ -154,7 +154,7 @@
                                     <!-- Informasi Lokasi, Waktu & Tombol Aksi -->
                                     <div class="gap-2 d-flex align-items-center flex-wrap">
                                         @if ($comment->location)
-                                        <span class="text-muted" style="font-size: 10px;">
+                                        <span class="text-muted comment-location-badge" style="font-size: 10px;">
                                             <i class="bi bi-geo-alt" aria-hidden="true"></i>
                                             {{ $comment->location }}
                                         </span>
@@ -240,11 +240,11 @@
                                         </div>
                                         @endif
 
-                                        <div class="gap-2 mt-2 d-none align-items-center comment-image-preview ms-2">
+                                        <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
                                             <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
-                                                style="width: 48px; height: 48px;">
+                                                style="width: 64px; height: 64px;">
                                             <button type="button"
-                                                class="p-0 btn btn-link btn-sm text-danger comment-image-remove" style="font-size: 11px;">Hapus foto</button>
+                                                class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
                                         </div>
                                     </form>
                                     @endif
@@ -282,7 +282,7 @@
                                             <span class="text-muted"
                                                 style="font-size: 10px;">{{ $reply->created_at->format('d M Y, H:i') }}</span>
                                             @if ($reply->location)
-                                            <span class="text-muted" style="font-size: 10px;">
+                                            <span class="text-muted comment-location-badge" style="font-size: 10px;">
                                                 <i class="bi bi-geo-alt" aria-hidden="true"></i>
                                                 {{ $reply->location }}
                                             </span>
@@ -329,30 +329,50 @@
 
                                         <!-- FORM EDIT REPLY -->
                                         @if(auth()->id() === $reply->user_id)
-                                        <form id="edit-form-{{ $reply->id }}" class="edit-comment-form d-none mt-2 pt-2 border-top" enctype="multipart/form-data" onsubmit="submitEditComment(event, {{ $reply->id }})">
+                                        <form id="edit-form-{{ $reply->id }}" class="edit-comment-form d-none mt-2" enctype="multipart/form-data" onsubmit="submitEditComment(event, {{ $reply->id }})">
                                             @csrf
-                                            @method('PUT')
 
-                                            <div class="mb-2">
-                                                <textarea name="body" class="form-control form-control-sm" rows="2">{{ $reply->body }}</textarea>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="body" id="edit-input-{{ $reply->id }}"
+                                                    class="px-3 border-0 form-control rounded-pill bg-light"
+                                                    value="{{ $reply->body }}"
+                                                    placeholder="Edit komentar..."
+                                                    style="font-size: 11px;">
+
+                                                <button type="button"
+                                                    class="p-0 border btn btn-light d-inline-flex align-items-center justify-content-center text-secondary comment-image-trigger"
+                                                    title="Tambah foto" aria-label="Tambah foto komentar">
+                                                    <i class="bi bi-image" aria-hidden="true"></i>
+                                                </button>
+
+                                                <input type="file" name="image" class="d-none comment-image-input"
+                                                    accept="image/jpeg,image/png,image/gif"
+                                                    aria-label="Pilih foto komentar">
+
+                                                <button type="submit"
+                                                    class="px-3 btn btn-dark btn-sm rounded-pill ms-1"
+                                                    style="font-size: 10px;">Simpan</button>
+
+                                                <button type="button"
+                                                    class="px-3 btn btn-light btn-sm rounded-pill ms-1 text-danger"
+                                                    style="font-size: 10px;"
+                                                    onclick="toggleEditForm({{ $reply->id }})">Batal</button>
                                             </div>
 
-                                            <div class="mb-2 d-flex align-items-center gap-2 flex-wrap">
-                                                <input type="file" name="image" class="form-control form-control-sm" style="font-size: 11px;" accept="image/jpeg,image/png,image/gif">
-
-                                                @if($reply->image_path)
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="remove-image-{{ $reply->id }}">
-                                                    <label class="form-check-label text-danger" for="remove-image-{{ $reply->id }}" style="font-size: 11px;">
-                                                        Hapus gambar
-                                                    </label>
-                                                </div>
-                                                @endif
+                                            @if($reply->image_path)
+                                            <div class="form-check mt-1 ms-2">
+                                                <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="remove-image-{{ $reply->id }}">
+                                                <label class="form-check-label text-danger" for="remove-image-{{ $reply->id }}" style="font-size: 10px;">
+                                                    Hapus gambar lama
+                                                </label>
                                             </div>
+                                            @endif
 
-                                            <div class="d-flex gap-2">
-                                                <button type="submit" class="px-2 py-1 btn btn-primary btn-sm" style="font-size: 10px;">Simpan</button>
-                                                <button type="button" class="px-2 py-1 btn btn-secondary btn-sm" style="font-size: 10px;" onclick="toggleEditForm({{ $reply->id }})">Batal</button>
+                                            <div class="gap-2 mt-2 d-none align-items-center comment-image-preview">
+                                                <img src="" alt="Preview foto komentar" class="rounded object-fit-cover"
+                                                    style="width: 64px; height: 64px;">
+                                                <button type="button"
+                                                    class="p-0 btn btn-link btn-sm text-danger comment-image-remove">Hapus foto</button>
                                             </div>
                                         </form>
                                         @endif

@@ -623,7 +623,7 @@
         function commentLocationHtml(location) {
             if (!location) return '';
 
-            return `<span class="text-muted" style="font-size: 10px;">
+            return `<span class="text-muted comment-location-badge" style="font-size: 10px;">
                 <i class="bi bi-geo-alt" aria-hidden="true"></i> ${escapeHtml(location)}
             </span>`;
         }
@@ -652,13 +652,13 @@
             }
         }
 
-        function commentLikeHtml(commentId, liked = false, count = 0) {
+        function commentLikeHtml(commentId, liked = false, count = 0, fontSize = 11) {
             const iconClass = liked ? 'bi-heart-fill text-danger' : 'bi-heart';
             const label = liked ? 'Batal suka komentar' : 'Suka komentar';
 
             return `<button type="button" id="comment-like-button-${commentId}"
-                class="gap-1 p-0 btn btn-link btn-sm text-muted text-decoration-none d-inline-flex align-items-center"
-                style="font-size: 11px;" title="${label}" aria-label="${label}" aria-pressed="${liked}"
+                class="gap-1 p-0 btn btn-link btn-sm text-muted text-decoration-none d-inline-flex align-items-center ms-auto"
+                style="font-size: ${fontSize}px;" title="${label}" aria-label="${label}" aria-pressed="${liked}"
                 onclick="toggleCommentLike(${commentId})">
                 <i class="bi ${iconClass}" id="comment-like-icon-${commentId}" aria-hidden="true"></i>
                 <span id="comment-like-count-${commentId}">${count}</span>
@@ -700,15 +700,14 @@
                             <span class="d-block fw-bold text-dark">${userName}</span>
                             ${commentBody}
                             ${commentImage}
-                            <div class="gap-2 d-flex align-items-center">
-                                <span class="text-muted" style="font-size: 10px;">Baru saja</span>
+                            <div class="gap-2 d-flex align-items-center flex-wrap">
                                 ${commentLocationHtml(comment.location)}
-                                ${commentLikeHtml(comment.id)}
+                                <span class="text-muted" style="font-size: 10px;">Baru saja</span>
                                 <button class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
                                     style="font-size: 11px;" onclick="toggleReplyForm(${comment.id})">Balas</button>
-                                <span class="text-muted" style="font-size: 10px;">•</span>
+                                ${commentLikeHtml(comment.id)}
                                 <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
-                                    style="font-size: 11px;" onclick="confirmDeleteComment('/comments/${comment.id}', 'comment-container-${comment.id}')">
+                                    style="font-size: 11px; z-index: 10; position: relative;" onclick="confirmDeleteComment('/comments/${comment.id}', 'comment-container-${comment.id}')">
                                     <i class="bi bi-trash"></i> Hapus
                                 </button>
                             </div>
@@ -907,13 +906,14 @@
                                 <span class="d-block fw-bold text-dark">${userName}</span>
                                 ${commentBody}
                                 ${commentImage}
-                                <div class="gap-2 d-flex align-items-center">
+                                <div class="gap-2 d-flex align-items-center flex-wrap">
+                                    <span class="text-muted" style="font-size: 10px;">Baru saja</span>
                                     ${commentLocation}
-                                    ${commentLikeHtml(data.comment.id)}
                                     <button type="button" class="p-0 btn btn-link btn-sm text-muted text-decoration-none"
                                         style="font-size: 10px;" onclick="toggleReplyForm(${data.comment.id})">Balas</button>
+                                    ${commentLikeHtml(data.comment.id, false, 0, 10)}
                                     <button type="button" class="p-0 border-0 btn btn-link text-danger text-decoration-none"
-                                        style="font-size: 10px;"
+                                        style="font-size: 10px; z-index: 10; position: relative;"
                                         onclick="confirmDeleteComment('/comments/${data.comment.id}', 'comment-container-${data.comment.id}')">
                                         <i class="bi bi-trash"></i> Hapus
                                     </button>
@@ -1168,69 +1168,72 @@
     <!-- Script buat Preview Foto & Loading State Tombol Kirim -->
     <script>
         // 1. Preview Gambar
-        const imageInput = document.getElementById('post-image');
-        const previewContainer = document.getElementById('image-preview-container');
-        const previewImage = document.getElementById('image-preview');
-        const removeButton = document.getElementById('remove-image');
-
-        imageInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                previewImage.src = URL.createObjectURL(file);
-                previewContainer.classList.remove('d-none');
-            }
-        });
-
-        removeButton.addEventListener('click', function() {
-            imageInput.value = '';
-            previewImage.src = '#';
-            previewContainer.classList.add('d-none');
-        });
-
-        // 2. Loading State saat Form Postingan Disubmit
         const postForm = document.getElementById('post-form');
-        const postContent = document.getElementById('postContent');
-        const charCounter = document.getElementById('charCounter');
-        const warningMessage = document.getElementById('warningMessage');
-        const submitBtn = document.getElementById('submit-btn');
-        const btnText = document.getElementById('btn-text');
-        const btnSpinner = document.getElementById('btn-spinner');
 
-        function checkLength(textarea) {
-            const length = textarea.value.length;
-            charCounter.textContent = `${length}/500`;
-            warningMessage.style.display = length > 500 ? 'inline' : 'none';
-        }
+        if (postForm) {
+            const imageInput = document.getElementById('post-image');
+            const previewContainer = document.getElementById('image-preview-container');
+            const previewImage = document.getElementById('image-preview');
+            const removeButton = document.getElementById('remove-image');
 
-        checkLength(postContent);
+            imageInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    previewImage.src = URL.createObjectURL(file);
+                    previewContainer.classList.remove('d-none');
+                }
+            });
 
-        postForm.addEventListener('submit', async function(event) {
-            if (postContent.value.length > 500) {
+            removeButton.addEventListener('click', function() {
+                imageInput.value = '';
+                previewImage.src = '#';
+                previewContainer.classList.add('d-none');
+            });
+
+            // 2. Loading State saat Form Postingan Disubmit
+            const postContent = document.getElementById('postContent');
+            const charCounter = document.getElementById('charCounter');
+            const warningMessage = document.getElementById('warningMessage');
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+
+            function checkLength(textarea) {
+                const length = textarea.value.length;
+                charCounter.textContent = `${length}/500`;
+                warningMessage.style.display = length > 500 ? 'inline' : 'none';
+            }
+
+            checkLength(postContent);
+
+            postForm.addEventListener('submit', async function(event) {
+                if (postContent.value.length > 500) {
+                    event.preventDefault();
+                    checkLength(postContent);
+                    return;
+                }
+
                 event.preventDefault();
-                checkLength(postContent);
-                return;
-            }
+                if (postForm.dataset.submitting) return;
 
-            event.preventDefault();
-            if (postForm.dataset.submitting) return;
+                postForm.dataset.submitting = 'true';
+                submitBtn.disabled = true;
+                btnText.textContent = 'Menyiapkan lokasi...';
+                btnSpinner.classList.remove('d-none');
 
-            postForm.dataset.submitting = 'true';
-            submitBtn.disabled = true;
-            btnText.textContent = 'Menyiapkan lokasi...';
-            btnSpinner.classList.remove('d-none');
-
-            try {
-                setFormLocation(postForm, await deviceLocationReady);
-                btnText.textContent = 'Mengirim...';
-                postForm.submit();
-            } catch (error) {
-                delete postForm.dataset.submitting;
-                submitBtn.disabled = false;
-                btnText.textContent = 'Kirim';
-                btnSpinner.classList.add('d-none');
-                Swal.fire('Gagal mengirim', error.message, 'error');
-            }
-        });
+                try {
+                    setFormLocation(postForm, await deviceLocationReady);
+                    btnText.textContent = 'Mengirim...';
+                    postForm.submit();
+                } catch (error) {
+                    delete postForm.dataset.submitting;
+                    submitBtn.disabled = false;
+                    btnText.textContent = 'Kirim';
+                    btnSpinner.classList.add('d-none');
+                    Swal.fire('Gagal mengirim', error.message, 'error');
+                }
+            });
+        }
     </script>
 </body>
 

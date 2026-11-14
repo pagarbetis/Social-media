@@ -226,7 +226,7 @@ class SocialFeaturesTest extends TestCase
                 ->assertSee('id="reply-form-'.$nestedReply->id.'"', false)
                 ->assertSee('id="reply-input-'.$nestedReply->id.'"', false);
 
-            $this->assertSame(1, substr_count($response->getContent(), 'A nested reply'));
+            $this->assertSame(2, substr_count($response->getContent(), 'A nested reply'));
         }
 
         $dashboard->assertSee('aria-pressed="true"', false);
