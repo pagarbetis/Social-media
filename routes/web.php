@@ -21,6 +21,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
     Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment'])->name('comments.like');
     Route::post('/comments/{comment}/reply', [CommentController::class, 'storeReply']);
+    Route::match(['post', 'put'], '/comments/{comment}', [CommentController::class, 'update'])
+        ->name('comments.update')
+        ->middleware('auth');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
     Route::get('/profile/password', [ProfileController::class, 'editPassword'])->name('password.edit');
@@ -33,4 +36,4 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

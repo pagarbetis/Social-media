@@ -193,71 +193,71 @@
 
             <!-- Menu Desktop dengan Dropdown -->
             @auth
-                @php
-                    $recentNotifications = auth()->user()->notifications()->with('sender')->limit(8)->get();
-                    $unreadNotificationCount = auth()->user()->notifications()->where('is_read', false)->count();
-                @endphp
-                <div class="gap-2 d-flex align-items-center">
-                    <div class="dropdown">
-                        <button type="button"
-                            class="rounded-circle position-relative btn btn-outline-light btn-sm d-inline-flex align-items-center justify-content-center"
-                            aria-label="Notifikasi{{ $unreadNotificationCount ? ', '.$unreadNotificationCount.' belum dibaca' : '' }}"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell-fill" aria-hidden="true"></i>
-                            @if ($unreadNotificationCount > 0)
-                                <span class="top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger">
-                                    {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
-                                </span>
-                            @endif
-                        </button>
-                        <div class="p-0 shadow dropdown-menu dropdown-menu-end rounded-3 notification-menu">
-                            <div class="px-3 py-2 border-bottom fw-semibold">Notifikasi</div>
-                            @forelse ($recentNotifications as $notification)
-                                <form action="{{ route('notifications.read', $notification) }}" method="POST">
-                                    @csrf
-                                    <button type="submit"
-                                        class="px-3 py-2 text-start dropdown-item text-wrap {{ $notification->is_read ? '' : 'bg-light' }}">
-                                        <span class="d-block">{{ $notification->message }}</span>
-                                        <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
-                                    </button>
-                                </form>
-                            @empty
-                                <p class="px-3 py-3 mb-0 small text-muted">Belum ada notifikasi.</p>
-                            @endforelse
-                        </div>
-                    </div>
-                    <div class="dropdown d-none d-md-block">
-                        <button
-                            class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> Akun Saya
-                        </button>
-                        <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
-                            <li>
-                                <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
-                                    <i class="bi bi-person me-2"></i> Profil Saya
-                                </a>
-                            </li>
-                            <li>
-                                <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
-                                    <i class="bi bi-key me-2"></i> Ganti Password
-                                </a>
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li>
-                                <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="button" onclick="confirmLogout()"
-                                        class="py-2 bg-transparent border-0 dropdown-item small text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
+            @php
+            $recentNotifications = auth()->user()->notifications()->with('sender')->limit(8)->get();
+            $unreadNotificationCount = auth()->user()->notifications()->where('is_read', false)->count();
+            @endphp
+            <div class="gap-2 d-flex align-items-center">
+                <div class="dropdown">
+                    <button type="button"
+                        class="rounded-circle position-relative btn btn-outline-light btn-sm d-inline-flex align-items-center justify-content-center"
+                        aria-label="Notifikasi{{ $unreadNotificationCount ? ', '.$unreadNotificationCount.' belum dibaca' : '' }}"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                        @if ($unreadNotificationCount > 0)
+                        <span class="top-0 position-absolute start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
+                        </span>
+                        @endif
+                    </button>
+                    <div class="p-0 shadow dropdown-menu dropdown-menu-end rounded-3 notification-menu">
+                        <div class="px-3 py-2 border-bottom fw-semibold">Notifikasi</div>
+                        @forelse ($recentNotifications as $notification)
+                        <form action="{{ route('notifications.read', $notification) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                class="px-3 py-2 text-start dropdown-item text-wrap {{ $notification->is_read ? '' : 'bg-light' }}">
+                                <span class="d-block">{{ $notification->message }}</span>
+                                <small class="text-muted">{{ $notification->created_at->diffForHumans() }}</small>
+                            </button>
+                        </form>
+                        @empty
+                        <p class="px-3 py-3 mb-0 small text-muted">Belum ada notifikasi.</p>
+                        @endforelse
                     </div>
                 </div>
+                <div class="dropdown d-none d-md-block">
+                    <button
+                        class="gap-1 px-3 btn btn-outline-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i> Akun Saya
+                    </button>
+                    <ul class="py-2 shadow-sm dropdown-menu dropdown-menu-end rounded-3">
+                        <li>
+                            <a class="py-2 dropdown-item small" href="{{ route('profile.show', auth()->id()) }}">
+                                <i class="bi bi-person me-2"></i> Profil Saya
+                            </a>
+                        </li>
+                        <li>
+                            <a class="py-2 dropdown-item small" href="{{ route('password.edit') }}">
+                                <i class="bi bi-key me-2"></i> Ganti Password
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <form id="logout-form-dropdown" action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="button" onclick="confirmLogout()"
+                                    class="py-2 bg-transparent border-0 dropdown-item small text-danger">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
             @endauth
         </div>
     </nav>
@@ -269,33 +269,33 @@
 
     <!-- 3. Bottom Navbar Mobile: Hanya muncul di HP (d-flex d-md-none) -->
     @auth
-        <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
-            style="z-index: 1030;">
-            <!-- Tombol Home -->
-            <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
-                style="font-size: 11px;">
-                <i class="bi bi-house-door fs-5"></i>
-                <span>Home</span>
-            </a>
+    <div class="py-2 bg-white shadow-sm fixed-bottom border-top d-flex d-md-none justify-content-around align-items-center"
+        style="z-index: 1030;">
+        <!-- Tombol Home -->
+        <a href="{{ route('dashboard') }}" class="text-dark text-decoration-none d-flex flex-column align-items-center"
+            style="font-size: 11px;">
+            <i class="bi bi-house-door fs-5"></i>
+            <span>Home</span>
+        </a>
 
-            <!-- Tombol Profil -->
-            <a href="{{ route('profile.show', auth()->id()) }}"
-                class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
-                <i class="bi bi-person-circle fs-5"></i>
-                <span>Profil</span>
-            </a>
+        <!-- Tombol Profil -->
+        <a href="{{ route('profile.show', auth()->id()) }}"
+            class="text-dark text-decoration-none d-flex flex-column align-items-center" style="font-size: 11px;">
+            <i class="bi bi-person-circle fs-5"></i>
+            <span>Profil</span>
+        </a>
 
-            <!-- Tombol Logout -->
-            <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
-                @csrf
-                <button type="button" onclick="confirmLogout()"
-                    class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
-                    style="font-size: 11px; cursor: pointer;">
-                    <i class="bi bi-box-arrow-right fs-5"></i>
-                    <span>Logout</span>
-                </button>
-            </form>
-        </div>
+        <!-- Tombol Logout -->
+        <form id="logout-form-mobile" action="{{ route('logout') }}" method="POST" class="m-0 d-inline">
+            @csrf
+            <button type="button" onclick="confirmLogout()"
+                class="p-0 bg-transparent border-0 text-danger d-flex flex-column align-items-center"
+                style="font-size: 11px; cursor: pointer;">
+                <i class="bi bi-box-arrow-right fs-5"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+    </div>
     @endauth
 
     <!-- Bootstrap JS Bundle -->
@@ -1039,16 +1039,16 @@
                 }
             });
         }
-        @if (session('success'))
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: "{{ session('success') }}",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
+        @if(session('success'))
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: "{{ session('success') }}",
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
         @endif
 
         function updateCount(textarea) {
@@ -1064,6 +1064,173 @@
                 warning.style.display = 'none';
             }
         }
+
+        // Fungsi untuk memunculkan / menyembunyikan form edit
+        function toggleEditForm(commentId) {
+            const form = document.getElementById(`edit-form-${commentId}`);
+            if (form) {
+                form.classList.toggle('d-none');
+            }
+        }
+
+        // Fungsi AJAX untuk submit update komentar/balasan
+        function submitEditComment(event, commentId) {
+            event.preventDefault();
+            const form = document.getElementById(`edit-form-${commentId}`);
+            const formData = new FormData(form);
+
+            fetch(`/comments/${commentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 1. Update teks komentar
+                        const bodyElement = document.getElementById(`comment-body-${commentId}`);
+                        if (bodyElement) {
+                            bodyElement.innerText = data.comment.body;
+                        }
+
+                        // 2. Update gambar komentar
+                        let imageContainer = document.getElementById(`comment-image-container-${commentId}`);
+                        if (data.comment.image_path) {
+                            const imageUrl = `/storage/${data.comment.image_path}`;
+                            if (imageContainer) {
+                                imageContainer.innerHTML = `<img src="${imageUrl}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
+                            } else {
+                                const textEl = document.getElementById(`comment-body-${commentId}`);
+                                const newImgDiv = document.createElement('div');
+                                newImgDiv.id = `comment-image-container-${commentId}`;
+                                newImgDiv.innerHTML = `<img src="${imageUrl}" alt="Foto komentar" class="mt-1 mb-2 img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">`;
+                                textEl.insertAdjacentElement('afterend', newImgDiv);
+                            }
+                        } else {
+                            if (imageContainer) {
+                                imageContainer.remove();
+                            }
+                        }
+
+                        // 3. TAMPILKAN KEMBALI LOKASI JIKA ADA
+                        if (data.comment.location) {
+                            const commentContainer = document.getElementById(`comment-container-${commentId}`);
+                            if (commentContainer) {
+                                // Cari apakah elemen lokasi sudah ada sebelumnya
+                                let locationSpan = commentContainer.querySelector('.comment-location-badge');
+
+                                if (!locationSpan) {
+                                    // Jika belum ada, cari elemen tanggal/waktu di dalam container ini untuk dijadikan patokan posisi
+                                    // Asumsi elemen waktu dibungkus text-muted dengan format tanggal
+                                    const timeElements = commentContainer.querySelectorAll('.text-muted');
+                                    let targetElement = null;
+
+                                    timeElements.forEach(el => {
+                                        // Cari elemen yang keliatannya nampilin tanggal (bukan tombol balas/like)
+                                        if (el.textContent.includes('2026') || el.textContent.includes('AM') || el.textContent.includes('PM') || el.textContent.includes(':')) {
+                                            targetElement = el;
+                                        }
+                                    });
+
+                                    if (targetElement) {
+                                        const newLoc = document.createElement('span');
+                                        newLoc.className = 'text-muted comment-location-badge me-2';
+                                        newLoc.style.fontSize = '10px';
+                                        newLoc.innerHTML = `<i class="bi bi-geo-alt" aria-hidden="true"></i> ${data.comment.location}`;
+                                        targetElement.before(newLoc);
+                                    }
+                                } else {
+                                    locationSpan.innerHTML = `<i class="bi bi-geo-alt" aria-hidden="true"></i> ${data.comment.location}`;
+                                }
+                            }
+                        }
+
+                        // Tutup form edit
+                        toggleEditForm(commentId);
+
+                        // Reset checkbox hapus gambar
+                        const removeCheckbox = form.querySelector('input[name="remove_image"]');
+                        if (removeCheckbox) removeCheckbox.checked = false;
+                    } else {
+                        alert('Gagal memperbarui komentar.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan pada server.');
+                });
+        }
+    </script>
+
+    <!-- Script buat Preview Foto & Loading State Tombol Kirim -->
+    <script>
+        // 1. Preview Gambar
+        const imageInput = document.getElementById('post-image');
+        const previewContainer = document.getElementById('image-preview-container');
+        const previewImage = document.getElementById('image-preview');
+        const removeButton = document.getElementById('remove-image');
+
+        imageInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                previewImage.src = URL.createObjectURL(file);
+                previewContainer.classList.remove('d-none');
+            }
+        });
+
+        removeButton.addEventListener('click', function() {
+            imageInput.value = '';
+            previewImage.src = '#';
+            previewContainer.classList.add('d-none');
+        });
+
+        // 2. Loading State saat Form Postingan Disubmit
+        const postForm = document.getElementById('post-form');
+        const postContent = document.getElementById('postContent');
+        const charCounter = document.getElementById('charCounter');
+        const warningMessage = document.getElementById('warningMessage');
+        const submitBtn = document.getElementById('submit-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+
+        function checkLength(textarea) {
+            const length = textarea.value.length;
+            charCounter.textContent = `${length}/500`;
+            warningMessage.style.display = length > 500 ? 'inline' : 'none';
+        }
+
+        checkLength(postContent);
+
+        postForm.addEventListener('submit', async function(event) {
+            if (postContent.value.length > 500) {
+                event.preventDefault();
+                checkLength(postContent);
+                return;
+            }
+
+            event.preventDefault();
+            if (postForm.dataset.submitting) return;
+
+            postForm.dataset.submitting = 'true';
+            submitBtn.disabled = true;
+            btnText.textContent = 'Menyiapkan lokasi...';
+            btnSpinner.classList.remove('d-none');
+
+            try {
+                setFormLocation(postForm, await deviceLocationReady);
+                btnText.textContent = 'Mengirim...';
+                postForm.submit();
+            } catch (error) {
+                delete postForm.dataset.submitting;
+                submitBtn.disabled = false;
+                btnText.textContent = 'Kirim';
+                btnSpinner.classList.add('d-none');
+                Swal.fire('Gagal mengirim', error.message, 'error');
+            }
+        });
     </script>
 </body>
 

@@ -57,13 +57,54 @@ class CommentController extends Controller
                 'sender_id' => $request->user()->id,
                 'post_id' => $post->id,
                 'message' => $parent
-                    ? $request->user()->name.' membalas komentar Anda.'
-                    : $request->user()->name.' mengomentari postingan Anda.',
+                    ? $request->user()->name . ' membalas komentar Anda.'
+                    : $request->user()->name . ' mengomentari postingan Anda.',
             ]);
         }
 
         return response()->json([
             'success' => true,
+            'comment' => $comment->load('user'),
+        ]);
+    }
+
+    public function update(Request $request, Comment $comment)
+    {
+        // Cek kepemilikan
+        if ($comment->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'body' => 'required|string|max:1000',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'remove_image' => 'nullable|boolean',
+        ]);
+
+        $comment->body = $request->body;
+
+        // Handle hapus gambar lama
+        if ($request->boolean('remove_image') && $comment->image_path) {
+            Storage::disk('public')->delete($comment->image_path);
+            $comment->image_path = null;
+        }
+
+        // Handle upload gambar baru
+        if ($request->hasFile('image')) {
+            if ($comment->image_path) {
+                Storage::disk('public')->delete($comment->image_path);
+            }
+            $comment->image_path = $request->file('image')->store('comments', 'public');
+        }
+
+        // Catatan: Kolom $comment->location sengaja tidak disentuh 
+        // agar informasi lokasi awal komentar tetap aman di database.
+
+        $comment->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Komentar berhasil diupdate!',
             'comment' => $comment->load('user'),
         ]);
     }
